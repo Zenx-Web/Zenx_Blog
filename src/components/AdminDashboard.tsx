@@ -115,6 +115,33 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }, 5000)
   }, [])
 
+  const notifySubscribers = useCallback(async (postId: string) => {
+    try {
+      const response = await fetch('/api/admin/notify-subscribers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ postId })
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null)
+        throw new Error(errorBody?.error || 'Failed to notify subscribers')
+      }
+
+      const result = await response.json()
+      const total = typeof result?.totalSubscribers === 'number' ? result.totalSubscribers : null
+      showNotification('success', total && total > 0
+        ? `Sent new post notification to ${total} subscriber${total === 1 ? '' : 's'}.`
+        : 'No subscribers opted in for notifications, nothing sent.'
+      )
+    } catch (error) {
+      console.error('Subscriber notification error:', error)
+      showNotification('warning', error instanceof Error ? error.message : 'Failed to notify subscribers')
+    }
+  }, [showNotification])
+
   useEffect(() => {
     setIsHydrated(true)
   }, [])
@@ -322,12 +349,19 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         body: JSON.stringify(payload),
       })
 
+      const responseBody = await response.json().catch(() => null)
+
       if (!response.ok) {
-        const errorBody = await response.json().catch(() => null)
+        const errorBody = responseBody
         throw new Error(errorBody?.error || 'Failed to update post status')
       }
 
+      const updatedPost = responseBody?.post ? mapPostRecord(responseBody.post) : null
+
       showNotification('success', !post.is_published ? 'Post published.' : 'Post moved to drafts.')
+      if (!post.is_published && updatedPost?.id) {
+        void notifySubscribers(updatedPost.id)
+      }
       void fetchManagedPosts()
     } catch (error) {
       console.error('Error updating publish status:', error)
@@ -654,6 +688,9 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       }
 
       showNotification('success', 'Post published successfully!')
+      if (data.post?.id) {
+        void notifySubscribers(data.post.id)
+      }
     } catch (error) {
       console.error('Error publishing post:', error)
       showNotification('error', `Failed to publish post: ${error instanceof Error ? error.message : 'Unknown error'}`)
