@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "export": "next export",
+    "deploy-build": "npm run build && npm run export",
+    "deploy-prep": "npm run deploy-build && echo 'Files ready in out/ folder - upload to Hostinger public_html'",
+    "preview": "npm run build && npm run start"
+  }
+}
