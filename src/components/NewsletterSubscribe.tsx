@@ -30,7 +30,7 @@ export default function NewsletterSubscribe({ inline = false }: { inline?: boole
         setStatus('error')
         setMessage(data.error || 'Failed to subscribe')
       }
-    } catch (error) {
+    } catch {
       setStatus('error')
       setMessage('Something went wrong. Please try again.')
     }

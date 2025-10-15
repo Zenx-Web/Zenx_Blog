@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import type { Database, Json, UserPreferences as StoredUserPreferences } from '@/types/database.types'
@@ -42,17 +42,7 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) {
-      setProfile(null)
-      setLoading(false)
-      return
-    }
-
-    fetchProfile()
-  }, [user])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return
 
     try {
@@ -76,7 +66,17 @@ export function useUserProfile() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(null)
+      setLoading(false)
+      return
+    }
+
+    fetchProfile()
+  }, [user, fetchProfile])
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: 'Not authenticated' }

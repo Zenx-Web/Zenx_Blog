@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 
@@ -25,17 +25,7 @@ export function useSavedPosts() {
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!user) {
-      setSavedPosts([])
-      setLoading(false)
-      return
-    }
-
-    fetchSavedPosts()
-  }, [user])
-
-  const fetchSavedPosts = async () => {
+  const fetchSavedPosts = useCallback(async () => {
     if (!user) return
 
     try {
@@ -64,7 +54,17 @@ export function useSavedPosts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setSavedPosts([])
+      setLoading(false)
+      return
+    }
+
+    fetchSavedPosts()
+  }, [user, fetchSavedPosts])
 
   const savePost = async (postId: string) => {
     if (!user) return { error: 'Not authenticated' }

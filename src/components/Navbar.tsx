@@ -184,6 +184,68 @@ export default function Navbar() {
                   {category.name}
                 </Link>
               ))}
+
+              {user ? (
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                  <p className="px-3 text-sm text-gray-500">Signed in as {user.email}</p>
+                  <div className="mt-3 space-y-2">
+                    <Link
+                      href="/dashboard"
+                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      📊 Dashboard
+                    </Link>
+                    <Link
+                      href="/dashboard/history"
+                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      📖 Reading History
+                    </Link>
+                    <Link
+                      href="/dashboard/saved"
+                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      🔖 Saved Posts
+                    </Link>
+                    <Link
+                      href="/dashboard/settings"
+                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      ⚙️ Settings
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        setIsMobileMenuOpen(false)
+                        await handleSignOut()
+                      }}
+                      className="block w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100 rounded-md text-base font-medium"
+                    >
+                      🚪 Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-6 flex flex-col gap-2">
+                  <Link
+                    href="/auth/login"
+                    className="block px-3 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    className="block px-3 py-2 text-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}

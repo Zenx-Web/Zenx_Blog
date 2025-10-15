@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 
@@ -29,17 +29,7 @@ export function useReadingHistory() {
   const [history, setHistory] = useState<ReadingHistoryItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!user) {
-      setHistory([])
-      setLoading(false)
-      return
-    }
-
-    fetchHistory()
-  }, [user])
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!user) return
 
     try {
@@ -68,7 +58,17 @@ export function useReadingHistory() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setHistory([])
+      setLoading(false)
+      return
+    }
+
+    fetchHistory()
+  }, [user, fetchHistory])
 
   const trackReading = async (postId: string, progress: number, readTimeSeconds: number) => {
     if (!user) return
