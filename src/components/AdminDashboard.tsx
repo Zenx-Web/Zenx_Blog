@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { SparklesIcon, EyeIcon } from '@heroicons/react/24/outline'
 import '../styles/enhanced-blog.css'
 import type { TrendingTopic as TrendingTopicSource } from '@/lib/trending'
 import type { BlogPost } from '@/lib/supabase'
+import { normalizeEmailPreferences } from '@/lib/preferences'
+import type { EmailPreferences } from '@/types/database.types'
 
 interface AdminDashboardProps {
   adminEmail: string
@@ -63,6 +65,41 @@ type ApiBlogPost = {
   updated_at?: string | null
 }
 
+interface AdminManagedUser {
+  id: string
+  email: string | null
+  createdAt: string | null
+  lastSignInAt: string | null
+  bannedUntil: string | null
+  factors: number
+  profile: {
+    display_name: string | null
+    avatar_url: string | null
+    bio: string | null
+    preferences: EmailPreferences | null
+    updated_at: string | null
+  } | null
+}
+
+type UserStatusFilter = 'all' | 'active' | 'deactivated'
+type UserAdminAction = 'reset_password' | 'deactivate' | 'activate' | 'delete'
+
+interface UserProfileDraft {
+  displayName: string
+  bio: string
+  emailNotifications: boolean
+  weekly: boolean
+  monthly: boolean
+}
+
+const createEmptyUserProfileDraft = (): UserProfileDraft => ({
+  displayName: '',
+  bio: '',
+  emailNotifications: true,
+  weekly: false,
+  monthly: false,
+})
+
 export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
@@ -79,6 +116,17 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [postError, setPostError] = useState<string | null>(null)
   const [postActionId, setPostActionId] = useState<string | null>(null)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [managedUsers, setManagedUsers] = useState<AdminManagedUser[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+  const [userLoadError, setUserLoadError] = useState<string | null>(null)
+  const [userSearch, setUserSearch] = useState('')
+  const userQueryRef = useRef('')
+  const [userStatusFilter, setUserStatusFilter] = useState<UserStatusFilter>('all')
+  const [selectedUser, setSelectedUser] = useState<AdminManagedUser | null>(null)
+  const [userProfileDraft, setUserProfileDraft] = useState<UserProfileDraft>(createEmptyUserProfileDraft())
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false)
+  const [userActionInFlight, setUserActionInFlight] = useState<UserAdminAction | null>(null)
+  const [userPagination, setUserPagination] = useState<{ page: number; perPage: number; count: number; hasMore: boolean } | null>(null)
   
   // Notification state
   const [notification, setNotification] = useState<{
@@ -105,6 +153,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const filteredTopics = trendingTopics.filter(topic => {
     return topic.topic.toLowerCase().includes(searchTerm.toLowerCase())
   })
+
+  const userStatusFilters: Array<{ label: string; value: UserStatusFilter }> = [
+    { label: 'All', value: 'all' },
+    { label: 'Active', value: 'active' },
+    { label: 'Deactivated', value: 'deactivated' },
+  ]
 
   // Show notification function
   const showNotification = useCallback((type: 'success' | 'error' | 'warning' | 'info', message: string) => {
@@ -145,6 +199,243 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   useEffect(() => {
     setIsHydrated(true)
   }, [])
+
+  const isUserCurrentlyDeactivated = (user: AdminManagedUser | null) => {
+    if (!user?.bannedUntil) return false
+    const timestamp = Date.parse(user.bannedUntil)
+    if (Number.isNaN(timestamp)) {
+      return true
+    }
+    return timestamp > Date.now()
+  }
+
+  const formatUserDateTime = (value: string | null) => {
+    if (!value) return 'Never'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Never'
+    }
+    return parsed.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  }
+
+  const fetchAdminUsers = useCallback(async (options?: { query?: string; status?: UserStatusFilter }) => {
+    setIsLoadingUsers(true)
+    setUserLoadError(null)
+
+    try {
+      let effectiveStatus = userStatusFilter
+      if (options?.status) {
+        effectiveStatus = options.status
+      }
+
+      if (options?.query !== undefined) {
+        userQueryRef.current = options.query.trim()
+      }
+
+      const effectiveQuery = userQueryRef.current
+      const params = new URLSearchParams()
+
+      if (effectiveQuery) {
+        params.set('query', effectiveQuery)
+      }
+      if (effectiveStatus !== 'all') {
+        params.set('status', effectiveStatus)
+      }
+
+      const response = await fetch(`/api/admin/users?${params.toString()}`)
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null)
+        throw new Error(errorBody?.error || `Failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      const users: AdminManagedUser[] = Array.isArray(data.users) ? data.users : []
+
+      setManagedUsers(users)
+      setUserPagination(data.pagination ?? null)
+
+      setSelectedUser((current) => {
+        if (!current) return current
+        return users.find((user) => user.id === current.id) ?? null
+      })
+    } catch (error) {
+      console.error('Error loading users:', error)
+      const message = error instanceof Error ? error.message : 'Unable to load users'
+      setUserLoadError(message)
+      showNotification('error', message)
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }, [userStatusFilter, showNotification])
+
+  useEffect(() => {
+    if (isHydrated) {
+      void fetchAdminUsers()
+    }
+  }, [isHydrated, fetchAdminUsers])
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setUserProfileDraft(createEmptyUserProfileDraft())
+      return
+    }
+
+    const preferences = normalizeEmailPreferences(selectedUser.profile?.preferences ?? null)
+    setUserProfileDraft({
+      displayName: selectedUser.profile?.display_name ?? '',
+      bio: selectedUser.profile?.bio ?? '',
+      emailNotifications: preferences.newPosts !== false,
+      weekly: Boolean(preferences.weekly),
+      monthly: Boolean(preferences.monthly),
+    })
+  }, [selectedUser])
+
+  const handleUserSearch = async () => {
+    await fetchAdminUsers({ query: userSearch })
+  }
+
+  const handleClearUserSearch = async () => {
+    setUserSearch('')
+    await fetchAdminUsers({ query: '' })
+  }
+
+  const handleRefreshUsers = async () => {
+    await fetchAdminUsers()
+  }
+
+  const handleSaveUserProfile = useCallback(async () => {
+    if (!selectedUser) {
+      return
+    }
+
+    setIsUpdatingUser(true)
+
+    try {
+      const preferencesPayload: EmailPreferences = {
+        newPosts: userProfileDraft.emailNotifications,
+        weekly: userProfileDraft.weekly,
+        monthly: userProfileDraft.monthly,
+      }
+
+      const response = await fetch('/api/admin/users/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          displayName: userProfileDraft.displayName.trim() || null,
+          bio: userProfileDraft.bio.trim() || null,
+          preferences: preferencesPayload,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null)
+        throw new Error(errorBody?.error || 'Failed to update profile')
+      }
+
+      const data = await response.json()
+      const updatedProfile = data?.profile
+      const normalizedPreferences = normalizeEmailPreferences(updatedProfile?.preferences ?? null)
+
+      setManagedUsers((users) =>
+        users.map((user) =>
+          user.id === selectedUser.id
+            ? {
+                ...user,
+                profile: {
+                  display_name: updatedProfile?.display_name ?? null,
+                  avatar_url: updatedProfile?.avatar_url ?? null,
+                  bio: updatedProfile?.bio ?? null,
+                  preferences: normalizedPreferences,
+                  updated_at: updatedProfile?.updated_at ?? null,
+                },
+              }
+            : user
+        )
+      )
+
+      setSelectedUser((current) =>
+        current && current.id === selectedUser.id
+          ? {
+              ...current,
+              profile: {
+                display_name: updatedProfile?.display_name ?? null,
+                avatar_url: updatedProfile?.avatar_url ?? null,
+                bio: updatedProfile?.bio ?? null,
+                preferences: normalizedPreferences,
+                updated_at: updatedProfile?.updated_at ?? null,
+              },
+            }
+          : current
+      )
+
+      setUserProfileDraft({
+        displayName: updatedProfile?.display_name ?? '',
+        bio: updatedProfile?.bio ?? '',
+        emailNotifications: normalizedPreferences.newPosts !== false,
+        weekly: Boolean(normalizedPreferences.weekly),
+        monthly: Boolean(normalizedPreferences.monthly),
+      })
+
+      showNotification('success', 'Profile updated successfully.')
+    } catch (error) {
+      console.error('Failed to update user profile:', error)
+      const message = error instanceof Error ? error.message : 'Unable to update profile'
+      showNotification('error', message)
+    } finally {
+      setIsUpdatingUser(false)
+    }
+  }, [selectedUser, userProfileDraft, showNotification])
+
+  const triggerUserAction = useCallback(async (action: UserAdminAction) => {
+    if (!selectedUser) {
+      return
+    }
+
+    if (action === 'delete') {
+      const confirmed = window.confirm(`Delete user ${selectedUser.email || selectedUser.id}? This cannot be undone.`)
+      if (!confirmed) {
+        return
+      }
+    }
+
+    setUserActionInFlight(action)
+
+    try {
+      const response = await fetch('/api/admin/users/actions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          userId: selectedUser.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null)
+        throw new Error(errorBody?.error || 'Failed to process action')
+      }
+
+      const data = await response.json()
+      showNotification('success', data?.message || 'Action completed successfully.')
+
+      if (action === 'delete') {
+        setSelectedUser(null)
+      }
+
+      await fetchAdminUsers()
+    } catch (error) {
+      console.error('Failed to process user action:', error)
+      const message = error instanceof Error ? error.message : 'Unable to process action'
+      showNotification('error', message)
+    } finally {
+      setUserActionInFlight(null)
+    }
+  }, [selectedUser, fetchAdminUsers, showNotification])
 
   const mapPostRecord = (post: ApiBlogPost): BlogPostRecord => ({
     id: post.id,
@@ -921,6 +1212,324 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Review, filter, and manage registered readers. Click a user to edit their profile or send account actions.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="flex items-center gap-2">
+                {userStatusFilters.map((filter) => (
+                  <button
+                    key={filter.value}
+                    onClick={() => setUserStatusFilter(filter.value)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      userStatusFilter === filter.value
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => void handleRefreshUsers()}
+                disabled={isLoadingUsers}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingUsers ? 'Refreshing…' : 'Refresh Users'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex-1">
+                  <label htmlFor="user-search" className="block text-sm font-medium text-gray-700 mb-1">
+                    Search users
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="user-search"
+                      type="text"
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          void handleUserSearch()
+                        }
+                      }}
+                      placeholder="Search by email or name…"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => void handleUserSearch()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Search
+                    </button>
+                    <button
+                      onClick={() => void handleClearUserSearch()}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500 self-end">
+                  Showing {managedUsers.length} result{managedUsers.length === 1 ? '' : 's'}
+                  {userPagination?.hasMore ? ' (more available)' : ''}
+                </div>
+              </div>
+
+              {userLoadError ? (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {userLoadError}
+                </div>
+              ) : null}
+
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Last Login
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {isLoadingUsers && managedUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
+                            Loading users…
+                          </td>
+                        </tr>
+                      ) : null}
+
+                      {!isLoadingUsers && managedUsers.length === 0 && !userLoadError ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
+                            No users found for this filter.
+                          </td>
+                        </tr>
+                      ) : null}
+
+                      {managedUsers.map((user) => {
+                        const userStatus = isUserCurrentlyDeactivated(user) ? 'Deactivated' : 'Active'
+                        return (
+                          <tr key={user.id} className={selectedUser?.id === user.id ? 'bg-blue-50' : undefined}>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="font-medium text-gray-900">{user.email || 'Unknown email'}</div>
+                              <div className="text-xs text-gray-500">
+                                Joined {formatUserDateTime(user.createdAt)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  userStatus === 'Active'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-yellow-100 text-yellow-700'
+                                }`}
+                              >
+                                {userStatus}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {formatUserDateTime(user.lastSignInAt)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <button
+                                onClick={() => setSelectedUser(user)}
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800"
+                              >
+                                Manage
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
+              {selectedUser ? (
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">User Detail</h3>
+                    <p className="text-sm text-gray-600">
+                      Manage account status and profile information for <span className="font-medium">{selectedUser.email || selectedUser.id}</span>.
+                    </p>
+                  </div>
+                  <dl className="space-y-2 text-sm text-gray-700">
+                    <div className="flex justify-between">
+                      <dt>Status</dt>
+                      <dd className={`font-medium ${isUserCurrentlyDeactivated(selectedUser) ? 'text-yellow-700' : 'text-green-700'}`}>
+                        {isUserCurrentlyDeactivated(selectedUser) ? 'Deactivated' : 'Active'}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Created</dt>
+                      <dd>{formatUserDateTime(selectedUser.createdAt)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Last Login</dt>
+                      <dd>{formatUserDateTime(selectedUser.lastSignInAt)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>MFA Factors</dt>
+                      <dd>{selectedUser.factors}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Profile</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="profile-display-name">
+                          Display Name
+                        </label>
+                        <input
+                          id="profile-display-name"
+                          type="text"
+                          value={userProfileDraft.displayName}
+                          onChange={(event) =>
+                            setUserProfileDraft((draft) => ({ ...draft, displayName: event.target.value }))
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Enter display name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="profile-bio">
+                          Bio
+                        </label>
+                        <textarea
+                          id="profile-bio"
+                          value={userProfileDraft.bio}
+                          onChange={(event) =>
+                            setUserProfileDraft((draft) => ({ ...draft, bio: event.target.value }))
+                          }
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Short description"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-600">Email Preferences</p>
+                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={userProfileDraft.emailNotifications}
+                            onChange={(event) =>
+                              setUserProfileDraft((draft) => ({ ...draft, emailNotifications: event.target.checked }))
+                            }
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                          />
+                          Receive new post alerts
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={userProfileDraft.weekly}
+                            onChange={(event) =>
+                              setUserProfileDraft((draft) => ({ ...draft, weekly: event.target.checked }))
+                            }
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                          />
+                          Weekly digest
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={userProfileDraft.monthly}
+                            onChange={(event) =>
+                              setUserProfileDraft((draft) => ({ ...draft, monthly: event.target.checked }))
+                            }
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                          />
+                          Monthly highlights
+                        </label>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => void handleSaveUserProfile()}
+                          disabled={isUpdatingUser}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isUpdatingUser ? 'Saving…' : 'Save Profile'}
+                        </button>
+                        <button
+                          onClick={() => setSelectedUser(null)}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-900">Account Actions</h4>
+                    <button
+                      onClick={() => void triggerUserAction('reset_password')}
+                      disabled={userActionInFlight === 'reset_password'}
+                      className="w-full px-4 py-2 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {userActionInFlight === 'reset_password' ? 'Sending reset…' : 'Send password reset email'}
+                    </button>
+                    <button
+                      onClick={() => void triggerUserAction(isUserCurrentlyDeactivated(selectedUser) ? 'activate' : 'deactivate')}
+                      disabled={userActionInFlight === 'activate' || userActionInFlight === 'deactivate'}
+                      className={`w-full px-4 py-2 rounded-lg font-medium hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isUserCurrentlyDeactivated(selectedUser)
+                          ? 'bg-green-600 text-white'
+                          : 'bg-yellow-500 text-white'
+                      }`}
+                    >
+                      {userActionInFlight === 'activate' || userActionInFlight === 'deactivate'
+                        ? 'Updating status…'
+                        : isUserCurrentlyDeactivated(selectedUser)
+                          ? 'Reactivate user'
+                          : 'Deactivate user'}
+                    </button>
+                    <button
+                      onClick={() => void triggerUserAction('delete')}
+                      disabled={userActionInFlight === 'delete'}
+                      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {userActionInFlight === 'delete' ? 'Deleting…' : 'Delete user'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 text-sm py-12">
+                  Select a user to view details and perform actions.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
