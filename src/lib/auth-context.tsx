@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { autoSubscribeUser } from './auto-subscribe'
 
 interface AuthContextType {
   user: User | null
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -51,14 +52,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     })
+
+    // Auto-subscribe user to email notifications if signup successful
+    if (!error && data.user?.email) {
+      console.log('[Auth] Auto-subscribing new user:', data.user.email)
+      const subscribeResult = await autoSubscribeUser(data.user.email)
+      
+      if (subscribeResult.success) {
+        console.log('[Auth] User successfully auto-subscribed to email notifications')
+      } else {
+        console.warn('[Auth] Auto-subscribe failed:', subscribeResult.error)
+      }
+    }
+
     return { error }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
+
+    // Auto-subscribe user to email notifications if login successful
+    if (!error && data.user?.email) {
+      console.log('[Auth] Auto-subscribing logged-in user:', data.user.email)
+      const subscribeResult = await autoSubscribeUser(data.user.email)
+      
+      if (subscribeResult.success && !subscribeResult.alreadySubscribed) {
+        console.log('[Auth] User auto-subscribed to email notifications')
+      }
+    }
+
     return { error }
   }
 

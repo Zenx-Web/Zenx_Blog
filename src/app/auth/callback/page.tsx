@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { autoSubscribeUser } from "@/lib/auto-subscribe";
 
 export default function AuthCallbackPage() {
   return (
@@ -63,6 +64,20 @@ function CallbackClient() {
           setStatus("error");
           setMessage("No active session was returned. Please try again.");
           return;
+        }
+
+        // Auto-subscribe user to email notifications
+        if (data.session.user?.email) {
+          console.log('[AuthCallback] Auto-subscribing user:', data.session.user.email)
+          const subscribeResult = await autoSubscribeUser(data.session.user.email)
+          
+          if (subscribeResult.success) {
+            if (!subscribeResult.alreadySubscribed) {
+              console.log('[AuthCallback] User successfully auto-subscribed to notifications')
+            }
+          } else {
+            console.warn('[AuthCallback] Auto-subscribe failed:', subscribeResult.error)
+          }
         }
 
         router.replace("/dashboard");

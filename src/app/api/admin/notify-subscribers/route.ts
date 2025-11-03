@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get verified subscribers
+    // NOTE: With Resend test domain (onboarding@resend.dev), emails only work 
+    // when sent to the Resend account owner email. Once imzenx.in domain is 
+    // verified, all subscriber emails will work.
     const { data: subscribers, error: subsError } = await supabaseAdmin
       .from('email_subscriptions')
       .select('email, preferences')
