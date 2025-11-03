@@ -277,7 +277,7 @@ export default function TermsPage() {
               <li>A statement that the information is accurate and that you are authorized to act on behalf of the copyright owner</li>
             </ul>
             <p className="mt-3">
-              Send DMCA notices to: <a href="mailto:legal@imzenx.in" className="text-blue-600 hover:underline">legal@imzenx.in</a>
+              Send DMCA notices to: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600 hover:underline">kbarhoi367@gmail.com</a>
             </p>
           </section>
 
@@ -357,8 +357,7 @@ export default function TermsPage() {
             </p>
             <div className="mt-4 rounded-lg bg-slate-50 p-6">
               <p className="font-semibold text-slate-900">Zenx Blog</p>
-              <p className="mt-2">Email: <a href="mailto:legal@imzenx.in" className="text-blue-600 hover:underline">legal@imzenx.in</a></p>
-              <p className="mt-1">Support: <a href="mailto:support@imzenx.in" className="text-blue-600 hover:underline">support@imzenx.in</a></p>
+              <p className="mt-2">Email: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600 hover:underline">kbarhoi367@gmail.com</a></p>
               <p className="mt-1">Website: <a href="https://imzenx.in" className="text-blue-600 hover:underline">https://imzenx.in</a></p>
             </div>
           </section>

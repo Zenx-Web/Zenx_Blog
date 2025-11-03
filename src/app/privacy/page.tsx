@@ -172,7 +172,7 @@ export default function PrivacyPolicyPage() {
             <h3 className="mt-4 text-xl font-semibold text-slate-800">6.3 Data Deletion</h3>
             <p className="mt-3">
               You have the right to request deletion of your personal information. To delete your account 
-              and data, please contact us at <a href="mailto:privacy@imzenx.in" className="text-blue-600 hover:underline">privacy@imzenx.in</a>. 
+              and data, please contact us at <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600 hover:underline">kbarhoi367@gmail.com</a>. 
               We will process your request within 30 days.
             </p>
 
@@ -244,9 +244,8 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="mt-4 rounded-lg bg-slate-50 p-6">
               <p className="font-semibold text-slate-900">Zenx Blog</p>
-              <p className="mt-2">Email: <a href="mailto:privacy@imzenx.in" className="text-blue-600 hover:underline">privacy@imzenx.in</a></p>
+              <p className="mt-2">Email: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600 hover:underline">kbarhoi367@gmail.com</a></p>
               <p className="mt-1">Website: <a href="https://imzenx.in" className="text-blue-600 hover:underline">https://imzenx.in</a></p>
-              <p className="mt-1">Support: <a href="mailto:support@imzenx.in" className="text-blue-600 hover:underline">support@imzenx.in</a></p>
             </div>
           </section>
 
@@ -267,7 +266,7 @@ export default function PrivacyPolicyPage() {
               <li>Right to withdraw consent at any time</li>
             </ul>
             <p className="mt-3">
-              To exercise any of these rights, please contact us at <a href="mailto:privacy@imzenx.in" className="text-blue-600 hover:underline">privacy@imzenx.in</a>.
+              To exercise any of these rights, please contact us at <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600 hover:underline">kbarhoi367@gmail.com</a>.
             </p>
           </section>
 

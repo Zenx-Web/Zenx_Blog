@@ -19,7 +19,7 @@ export default function ContactPage() {
               Questions about the site, story tips, or feedback on coverage.
             </p>
             <p className="mt-4 text-sm text-slate-800">
-              Email: <a href="mailto:hello@imzenx.in" className="text-blue-600">hello@imzenx.in</a>
+              Email: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600">kbarhoi367@gmail.com</a>
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
@@ -28,7 +28,7 @@ export default function ContactPage() {
               Collaborations, sponsored content, or advertising opportunities.
             </p>
             <p className="mt-4 text-sm text-slate-800">
-              Email: <a href="mailto:partners@imzenx.in" className="text-blue-600">partners@imzenx.in</a>
+              Email: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600">kbarhoi367@gmail.com</a>
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
@@ -37,7 +37,7 @@ export default function ContactPage() {
               Trouble signing in or managing your account? Our support team can help.
             </p>
             <p className="mt-4 text-sm text-slate-800">
-              Email: <a href="mailto:support@imzenx.in" className="text-blue-600">support@imzenx.in</a>
+              Email: <a href="mailto:kbarhoi367@gmail.com" className="text-blue-600">kbarhoi367@gmail.com</a>
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
