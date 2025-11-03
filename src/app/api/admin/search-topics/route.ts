@@ -24,13 +24,16 @@ export async function POST(request: Request) {
     const searchResults = await searchTopicsByQuery(query, limit)
     
     if (searchResults.length === 0) {
-      // Fallback to generated ideas if no real results found
-      const fallbackResults = await generateTopicIdeas(query, limit)
+      console.log(`⚠️ No live results found for "${query}", generating blog-worthy topics...`)
+      
+      // Generate intelligent blog topics based on the search query
+      const fallbackResults = generateBlogTopicsFromQuery(query, limit)
+      
       return NextResponse.json({
         success: true,
         topics: fallbackResults,
         query: query,
-        message: `Generated ${fallbackResults.length} topic ideas for "${query}" (no live results found)`,
+        message: `No live trending results found for "${query}". Here are ${fallbackResults.length} blog-worthy topic ideas you can write about.`,
         source: 'generated'
       })
     }
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
       success: true,
       topics: searchResults,
       query: query,
-      message: `Found ${searchResults.length} trending topics for "${query}"`,
+      message: `Found ${searchResults.length} live trending topics for "${query}"`,
       source: 'live'
     })
   } catch (error) {
@@ -51,95 +54,47 @@ export async function POST(request: Request) {
   }
 }
 
-// Generate topic ideas based on search query
-async function generateTopicIdeas(query: string, limit: number) {
-  const baseQuery = query.toLowerCase().trim()
+// Generate intelligent blog topics when no live results found
+function generateBlogTopicsFromQuery(query: string, limit: number) {
+  const baseQuery = query.trim()
+  const category = detectQueryCategory(baseQuery.toLowerCase())
   
-  // Topic templates and variations
-  const topicTemplates = [
-    `Latest ${query} trends and updates`,
-    `How ${query} is changing in 2025`,
-    `Top 10 ${query} tips for beginners`,
-    `The future of ${query}: What to expect`,
-    `${query} vs alternatives: Complete comparison`,
-    `Why ${query} is trending right now`,
-    `${query} mistakes to avoid in 2025`,
-    `The ultimate guide to ${query}`,
-    `${query} industry insights and analysis`,
-    `How to get started with ${query}`,
-    `${query}: Benefits and drawbacks explained`,
-    `${query} success stories and case studies`,
-    `The impact of ${query} on daily life`,
-    `${query} tools and resources you need to know`,
-    `${query} myths vs facts: Truth revealed`,
-    `${query} market predictions for 2025`,
-    `Best ${query} practices for professionals`,
-    `${query} innovations that will surprise you`,
-    `The science behind ${query} explained`,
-    `${query} trends that are going viral`
+  // Intelligent topic templates based on query type
+  const topics = [
+    `${baseQuery}: Complete Guide and Latest Updates`,
+    `Everything You Need to Know About ${baseQuery}`,
+    `${baseQuery} - Expert Analysis and Insights`,
+    `Top 10 Facts About ${baseQuery}`,
+    `${baseQuery}: Trends and Predictions for 2025`,
+    `Understanding ${baseQuery}: A Deep Dive`,
+    `${baseQuery} Explained: Beginner to Expert`,
+    `The Ultimate ${baseQuery} Resource Guide`,
+    `${baseQuery}: Why It Matters in 2025`,
+    `${baseQuery} - Common Questions Answered`,
+    `How ${baseQuery} is Changing the Industry`,
+    `${baseQuery}: Best Practices and Tips`,
+    `The Future of ${baseQuery}: What's Next`,
+    `${baseQuery} Success Stories and Case Studies`,
+    `${baseQuery} vs Alternatives: Complete Comparison`
   ]
-
-  // Category-specific variations
-  const categoryVariations: { [key: string]: string[] } = {
-    technology: [
-      `${query} AI integration possibilities`,
-      `${query} cybersecurity concerns and solutions`,
-      `${query} mobile app development trends`,
-      `${query} cloud computing advantages`,
-      `${query} automation impact on industries`
-    ],
-    business: [
-      `${query} startup opportunities and challenges`,
-      `${query} market analysis and growth potential`,
-      `${query} investment strategies and tips`,
-      `${query} business model innovations`,
-      `${query} entrepreneurship success factors`
-    ],
-    lifestyle: [
-      `${query} health and wellness benefits`,
-      `${query} sustainable living practices`,
-      `${query} work-life balance tips`,
-      `${query} personal development strategies`,
-      `${query} mindfulness and mental health`
-    ],
-    entertainment: [
-      `${query} celebrity news and updates`,
-      `${query} movie and TV show reviews`,
-      `${query} gaming industry developments`,
-      `${query} music trends and artist spotlights`,
-      `${query} viral social media content`
-    ]
-  }
-
-  // Detect category from query
-  const detectedCategory = detectQueryCategory(baseQuery)
   
-  // Combine templates with category-specific variations
-  let allTemplates = [...topicTemplates]
-  if (categoryVariations[detectedCategory]) {
-    allTemplates = [...allTemplates, ...categoryVariations[detectedCategory]]
-  }
-
-  // Generate topics with variations
-  const topics = allTemplates.slice(0, limit).map((template) => ({
-    topic: template,
-    source: 'Custom Search',
-    relevanceScore: Math.floor(Math.random() * 1500) + 500,
-    category: detectedCategory.charAt(0).toUpperCase() + detectedCategory.slice(1),
-    used: false,
-    searchQuery: query
+  return topics.slice(0, limit).map((topic, index) => ({
+    topic: topic,
+    source: 'Zenx Blog Ideas',
+    relevanceScore: 1000 - (index * 50),
+    category: category.charAt(0).toUpperCase() + category.slice(1),
+    searchQuery: query,
+    used: false
   }))
-
-  return topics
 }
 
 // Detect category from search query
 function detectQueryCategory(query: string): string {
-  const techKeywords = ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'automation', 'cloud', 'data']
+  const techKeywords = ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'automation', 'cloud', 'data', 'gaming', 'game']
   const businessKeywords = ['business', 'startup', 'investment', 'market', 'finance', 'entrepreneur', 'profit', 'strategy']
   const lifestyleKeywords = ['health', 'fitness', 'lifestyle', 'wellness', 'food', 'travel', 'fashion', 'home', 'mindfulness']
-  const entertainmentKeywords = ['movie', 'music', 'game', 'celebrity', 'tv', 'show', 'entertainment', 'viral', 'social']
-  const sportsKeywords = ['sport', 'football', 'basketball', 'soccer', 'tennis', 'olympics', 'fitness', 'athlete', 'team']
+  const entertainmentKeywords = ['movie', 'music', 'celebrity', 'tv', 'show', 'entertainment', 'viral', 'social']
+  const sportsKeywords = ['sport', 'football', 'basketball', 'soccer', 'tennis', 'olympics', 'athlete', 'team']
 
   if (techKeywords.some(keyword => query.includes(keyword))) return 'technology'
   if (businessKeywords.some(keyword => query.includes(keyword))) return 'business'

@@ -73,33 +73,51 @@ async function searchReddit(query: string): Promise<TrendingTopic[]> {
   try {
     console.log(`Searching Reddit for "${query}"...`)
     
-    // Search across relevant subreddits
-    const response = await axios.get(`https://www.reddit.com/search.json`, {
-      params: {
-        q: query,
-        sort: 'hot',
-        limit: 25,
-        t: 'day' // Last day
-      },
-      timeout: 4000,
-      headers: {
-        'User-Agent': 'ZenxBlog/1.0 (Web Scraper for trending topics)'
+    const results: TrendingTopic[] = []
+    
+    // Try multiple time ranges to get more results
+    const timeRanges = ['day', 'week', 'month']
+    
+    for (const timeRange of timeRanges) {
+      try {
+        const response = await axios.get(`https://www.reddit.com/search.json`, {
+          params: {
+            q: query,
+            sort: 'relevance', // Changed from 'hot' to 'relevance' for better matching
+            limit: 25,
+            t: timeRange
+          },
+          timeout: 3000,
+          headers: {
+            'User-Agent': 'ZenxBlog/1.0 (Web Scraper for trending topics)'
+          }
+        })
+        
+        const posts: Array<{ data: { title: string; score: number; subreddit: string; permalink: string; num_comments: number } }> = 
+          response.data.data.children
+        
+        const validPosts = posts
+          .filter(({ data }) => data.title && data.title.length > 15)
+          .map(({ data }) => ({
+            topic: cleanTopicTitle(data.title),
+            source: `Reddit r/${data.subreddit}`,
+            relevanceScore: calculateRelevanceScore(data.score, data.num_comments),
+            category: getCategoryFromSubreddit(data.subreddit),
+            url: `https://reddit.com${data.permalink}`,
+            searchQuery: query
+          }))
+        
+        results.push(...validPosts)
+        
+        // If we got enough results, break early
+        if (results.length >= 15) break
+      } catch (err) {
+        console.warn(`Reddit search failed for timeRange ${timeRange}:`, err)
+        continue
       }
-    })
+    }
     
-    const posts: Array<{ data: { title: string; score: number; subreddit: string; permalink: string; num_comments: number } }> = 
-      response.data.data.children
-    
-    return posts
-      .filter(({ data }) => data.title && data.title.length > 15)
-      .map(({ data }) => ({
-        topic: cleanTopicTitle(data.title),
-        source: `Reddit r/${data.subreddit}`,
-        relevanceScore: calculateRelevanceScore(data.score, data.num_comments),
-        category: getCategoryFromSubreddit(data.subreddit),
-        url: `https://reddit.com${data.permalink}`,
-        searchQuery: query
-      }))
+    return results
   } catch (error) {
     console.warn('Reddit search failed:', error instanceof Error ? error.message : 'Unknown error')
     return []
@@ -111,34 +129,47 @@ async function searchNews(query: string): Promise<TrendingTopic[]> {
   try {
     console.log(`Searching news for "${query}"...`)
     
+    const results: TrendingTopic[] = []
+    
     // Try NewsAPI first if available
     if (process.env.NEWS_API_KEY) {
-      const response = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          q: query,
-          sortBy: 'popularity',
-          pageSize: 20,
-          language: 'en',
-          apiKey: process.env.NEWS_API_KEY
-        },
-        timeout: 4000
-      })
-      
-      const articles: Array<{ title: string; url: string; source: { name: string }; publishedAt: string }> = 
-        response.data.articles
-      
-      return articles.map((article, index) => ({
-        topic: cleanTopicTitle(article.title),
-        source: article.source.name || 'News',
-        relevanceScore: 1500 - (index * 50), // Decreasing score by position
-        category: getCategoryFromNews(article.title),
-        url: article.url,
-        searchQuery: query
-      }))
+      try {
+        const response = await axios.get('https://newsapi.org/v2/everything', {
+          params: {
+            q: query,
+            sortBy: 'relevancy', // Changed to relevancy for better matches
+            pageSize: 30,
+            language: 'en',
+            apiKey: process.env.NEWS_API_KEY
+          },
+          timeout: 4000
+        })
+        
+        const articles: Array<{ title: string; url: string; source: { name: string }; publishedAt: string }> = 
+          response.data.articles
+        
+        results.push(...articles.map((article, index) => ({
+          topic: cleanTopicTitle(article.title),
+          source: article.source.name || 'News',
+          relevanceScore: 1800 - (index * 30), // Decreasing score by position
+          category: getCategoryFromNews(article.title),
+          url: article.url,
+          searchQuery: query
+        })))
+      } catch (err) {
+        console.warn('NewsAPI search failed:', err)
+      }
     }
     
-    // Fallback to Google News RSS
-    return await searchGoogleNews(query)
+    // Always try Google News as fallback/supplement
+    try {
+      const googleNewsResults = await searchGoogleNews(query)
+      results.push(...googleNewsResults)
+    } catch (err) {
+      console.warn('Google News search failed:', err)
+    }
+    
+    return results
   } catch (error) {
     console.warn('News search failed:', error instanceof Error ? error.message : 'Unknown error')
     return []
