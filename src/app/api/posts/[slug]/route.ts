@@ -23,9 +23,6 @@ export async function GET(
       )
     }
     
-    // Increment view count
-    await supabase.rpc('increment_post_views', { post_slug: slug })
-    
     // Get related posts
     const { data: relatedPosts } = await supabase
       .from('blog_posts')
@@ -47,7 +44,7 @@ export async function GET(
     return NextResponse.json({
       post: {
         ...post,
-        views: (post.views ?? 0) + 1 // Show incremented view count
+        views: post.views ?? 0
       },
       relatedPosts: relatedPosts || []
     })

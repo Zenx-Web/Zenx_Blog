@@ -1,30 +1,59 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { MagnifyingGlassIcon, Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect, useRef } from 'react'
+import { MagnifyingGlassIcon, Bars3Icon, XMarkIcon, UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/auth-context'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 const categories = [
-  { name: 'All', slug: 'all' },
-  { name: 'Technology', slug: 'technology' },
-  { name: 'Entertainment', slug: 'entertainment' },
-  { name: 'Business', slug: 'business' },
-  { name: 'Lifestyle', slug: 'lifestyle' },
-  { name: 'Sports', slug: 'sports' },
-  { name: 'World News', slug: 'world-news' }
+  { name: 'Technology', slug: 'technology', icon: '💻' },
+  { name: 'Gaming', slug: 'gaming', icon: '🎮' },
+  { name: 'Entertainment', slug: 'entertainment', icon: '🎬' },
+  { name: 'Business', slug: 'business', icon: '💼' },
+  { name: 'Lifestyle', slug: 'lifestyle', icon: '✨' },
+  { name: 'Sports', slug: 'sports', icon: '⚽' },
+  { name: 'World News', slug: 'world-news', icon: '🌍' }
 ]
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showCategoriesDropdown, setShowCategoriesDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUserMenu, setShowUserMenu] = useState(false)
   const { user, signOut } = useAuth()
+  const { profile } = useUserProfile()
+  
+  const categoriesRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  const resolvedDisplayName = profile?.display_name?.trim() || user?.email?.split('@')[0] || 'Account'
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
+        setShowCategoriesDropdown(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       window.location.href = `/?search=${encodeURIComponent(searchQuery)}`
+      setIsMobileMenuOpen(false)
     }
   }
 
@@ -38,78 +67,124 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <div className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-blue-600">Zenx Blog</h1>
-              <p className="text-xs text-gray-500">Hot Topics & Trends</p>
+          <Link href="/" className="flex items-center flex-shrink-0">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                ImZenx
+              </h1>
+              <p className="text-xs text-gray-500 hidden sm:block">AI meets Trending News</p>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              {categories.map((category) => (
-                <Link
-                  key={category.slug}
-                  href={category.slug === 'all' ? '/' : `/?category=${category.slug}`}
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  {category.name}
-                </Link>
-              ))}
+          <div className="hidden lg:flex items-center space-x-1">
+            <Link
+              href="/"
+              className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+            >
+              Home
+            </Link>
+
+            {/* Categories Dropdown */}
+            <div className="relative" ref={categoriesRef}>
+              <button
+                onClick={() => setShowCategoriesDropdown(!showCategoriesDropdown)}
+                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+              >
+                Categories
+                <ChevronDownIcon className={`h-4 w-4 transition-transform ${showCategoriesDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCategoriesDropdown && (
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                  <div className="grid grid-cols-1 gap-1 px-2">
+                    {categories.map((category) => (
+                      <Link
+                        key={category.slug}
+                        href={`/?category=${category.slug}`}
+                        className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:text-blue-600 rounded-md transition-all"
+                        onClick={() => setShowCategoriesDropdown(false)}
+                      >
+                        <span className="text-lg">{category.icon}</span>
+                        <span className="font-medium">{category.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
+            <Link
+              href="/about"
+              className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+            >
+              About
+            </Link>
+            <Link
+              href="/how-we-use-ai"
+              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+            >
+              How We Use AI
+            </Link>
+            <Link
+              href="/contact"
+              className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+            >
+              Contact
+            </Link>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Right Side: Search & User */}
+          <div className="hidden lg:flex items-center gap-3">
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search articles..."
-                className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Search..."
+                className="w-48 xl:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </form>
 
             {/* User Menu */}
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-blue-600 rounded-lg transition"
+                  className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                 >
                   <UserCircleIcon className="h-6 w-6" />
-                  <span className="text-sm font-medium">{user.email?.split('@')[0]}</span>
+                  <span className="text-sm font-medium max-w-[100px] truncate">{resolvedDisplayName}</span>
+                  <ChevronDownIcon className={`h-4 w-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
                     <Link
                       href="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                       onClick={() => setShowUserMenu(false)}
                     >
                       📊 Dashboard
                     </Link>
                     <Link
                       href="/dashboard/history"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                       onClick={() => setShowUserMenu(false)}
                     >
                       📖 Reading History
                     </Link>
                     <Link
                       href="/dashboard/saved"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                       onClick={() => setShowUserMenu(false)}
                     >
                       🔖 Saved Posts
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                       onClick={() => setShowUserMenu(false)}
                     >
                       ⚙️ Settings
@@ -117,7 +192,7 @@ export default function Navbar() {
                     <hr className="my-1" />
                     <button
                       onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
                     >
                       🚪 Sign Out
                     </button>
@@ -134,7 +209,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg shadow-sm transition-all"
                 >
                   Sign Up
                 </Link>
@@ -143,10 +218,11 @@ export default function Navbar() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="lg:hidden flex items-center gap-2">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-700 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-2"
+              className="text-gray-700 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-2 transition"
+              aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
                 <XMarkIcon className="h-6 w-6" />
@@ -157,12 +233,30 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        {/* Mobile Navigation Slide-in Menu */}
+        <div
+          className={`lg:hidden fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="h-full overflow-y-auto">
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Menu
+              </h2>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg"
+                aria-label="Close menu"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
               {/* Mobile Search */}
-              <form onSubmit={handleSearch} className="relative mb-4">
+              <form onSubmit={handleSearch} className="relative">
                 <input
                   type="text"
                   value={searchQuery}
@@ -173,46 +267,97 @@ export default function Navbar() {
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </form>
 
-              {/* Mobile Categories */}
-              {categories.map((category) => (
+              {/* Navigation Links */}
+              <div className="space-y-1">
                 <Link
-                  key={category.slug}
-                  href={category.slug === 'all' ? '/' : `/?category=${category.slug}`}
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+                  href="/"
+                  className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base font-medium transition-all"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  {category.name}
+                  🏠 Home
                 </Link>
-              ))}
 
+                {/* Categories Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Categories
+                  </p>
+                  {categories.map((category) => (
+                    <Link
+                      key={category.slug}
+                      href={`/?category=${category.slug}`}
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="font-medium">{category.name}</span>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Pages Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Pages
+                  </p>
+                  <Link
+                    href="/about"
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base font-medium transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    ℹ️ About
+                  </Link>
+                  <Link
+                    href="/how-we-use-ai"
+                    className="flex items-center gap-3 text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-4 py-3 rounded-lg text-base font-medium transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    ⚙️ How We Use AI
+                  </Link>
+                  <Link
+                    href="/contact"
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base font-medium transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    📧 Contact
+                  </Link>
+                </div>
+              </div>
+
+              {/* User Section */}
               {user ? (
-                <div className="mt-6 border-t border-gray-200 pt-4">
-                  <p className="px-3 text-sm text-gray-500">Signed in as {user.email}</p>
-                  <div className="mt-3 space-y-2">
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Account
+                  </p>
+                  <p className="px-4 py-2 text-sm text-gray-600 truncate">
+                    {profile?.display_name || user.email}
+                  </p>
+                  <div className="mt-2 space-y-1">
                     <Link
                       href="/dashboard"
-                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       📊 Dashboard
                     </Link>
                     <Link
                       href="/dashboard/history"
-                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       📖 Reading History
                     </Link>
                     <Link
                       href="/dashboard/saved"
-                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       🔖 Saved Posts
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 rounded-md text-base font-medium"
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       ⚙️ Settings
@@ -222,24 +367,24 @@ export default function Navbar() {
                         setIsMobileMenuOpen(false)
                         await handleSignOut()
                       }}
-                      className="block w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100 rounded-md text-base font-medium"
+                      className="flex items-center gap-3 w-full text-left text-red-600 hover:bg-red-50 px-4 py-3 rounded-lg text-base transition-all"
                     >
                       🚪 Sign Out
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="mt-6 flex flex-col gap-2">
+                <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
                   <Link
                     href="/auth/login"
-                    className="block px-3 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 rounded-md"
+                    className="block text-center px-4 py-3 text-base font-medium text-gray-700 hover:text-blue-600 border border-gray-300 rounded-lg transition"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/auth/register"
-                    className="block px-3 py-2 text-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                    className="block text-center px-4 py-3 text-base font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg shadow-sm transition-all"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Sign Up
@@ -248,6 +393,14 @@ export default function Navbar() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
         )}
       </div>
     </nav>

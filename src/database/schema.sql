@@ -172,7 +172,9 @@ CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles
 CREATE OR REPLACE FUNCTION increment_post_views(post_slug TEXT)
 RETURNS VOID AS $$
 BEGIN
-    UPDATE blog_posts SET views = views + 1 WHERE slug = post_slug;
+  UPDATE blog_posts
+  SET views = COALESCE(views, 0) + 1
+  WHERE slug = post_slug;
 END;
 $$ language 'plpgsql';
 

@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import type { BlogContentFormat } from '@/types/content'
 
 // Initialize AI clients
 const openai = new OpenAI({
@@ -15,6 +16,8 @@ export interface BlogGenerationOptions {
   length: 'short' | 'medium' | 'long' | 'very-long'
   includeImages: boolean
   seoOptimized: boolean
+  format: BlogContentFormat
+  customPrompt?: string
 }
 
 export interface GeneratedBlog {
@@ -36,6 +39,161 @@ export interface GeneratedBlog {
     title: string
     content: string
   }>
+  aiSummary?: string[]
+  editorsNote?: string
+  keyTakeaways?: string[]
+}
+
+const FORMAT_GUIDELINES: Record<BlogContentFormat, {
+  label: string
+  purpose: string
+  structure: string[]
+  voice: string[]
+  signature: string[]
+}> = {
+  news: {
+    label: 'breaking news report',
+    purpose: 'deliver timely, verifiable facts with clear next steps',
+    structure: [
+      'Open with a dateline and concise lede summarising the most important facts',
+      'Follow an inverted pyramid: key developments → supporting evidence → wider context',
+      'Include at least two quoted sources (attribute them clearly, even if imaginary for narrative effect)',
+      'Add a timeline or “what we know” bullet list for chronological clarity',
+      'Close with the immediate outlook or confirmed next actions'
+    ],
+    voice: [
+      'Objective, third-person voice with short, declarative paragraphs',
+      'Prioritise accuracy, attribution, and specificity over hype',
+      'Reference locations, stakeholders, and numbers wherever possible'
+    ],
+    signature: [
+      'Embed a fact box or key metrics callout using semantic HTML',
+      'Use subheadings that read like newsroom slug lines, not generic labels'
+    ]
+  },
+  feature: {
+    label: 'feature profile',
+    purpose: 'immerse readers in a human-centred narrative that unfolds with depth',
+    structure: [
+      'Begin with a scene-setting anecdote or sensory moment that introduces the central character or setting',
+      'Weave background, stakes, and context through storytelling beats and transitions',
+      'Interleave reported detail with quotes, observations, and descriptive colour',
+      'Build toward a reveal, lesson, or transformation before closing with reflective resonance'
+    ],
+    voice: [
+      'Warm, cinematic prose that uses active verbs and sensory detail',
+      'Vary pacing with a mix of short and long sentences to sustain momentum',
+      'Let dialogue or quoted reflections punctuate the narrative arc'
+    ],
+    signature: [
+      'Highlight sidebars for “Behind the scenes” or “Key players” to add dimensionality',
+      'End with a forward-looking note or unanswered question that invites curiosity'
+    ]
+  },
+  analysis: {
+    label: 'analytical briefing',
+    purpose: 'decode why the topic matters, who is impacted, and what may happen next',
+    structure: [
+      'Start with a thesis paragraph framing the central question or tension',
+      'Provide essential background and data in a way that can stand alone as a reference',
+      'Break down competing viewpoints or scenarios with evidence-backed evaluation',
+      'Conclude with implications, risks, and practical recommendations'
+    ],
+    voice: [
+      'Confident, explanatory voice that balances accessibility with subject depth',
+      'Use comparisons, frameworks, or matrices to help readers interpret data',
+      'Cite plausible experts or sources to ground assertions'
+    ],
+    signature: [
+      'Include a table or structured list that summarises critical metrics or scenarios',
+      'Name sections with analytical verbs (e.g., “Assessing”, “Projecting”, “Modeling”)'
+    ]
+  },
+  opinion: {
+    label: 'opinion editorial',
+    purpose: 'argue a clear stance while acknowledging nuance and counterarguments',
+    structure: [
+      'Lead with a strong thesis statement or provocative hook within the opening sentences',
+      'Lay out supporting arguments with evidence, anecdotes, or personal authority',
+      'Address counterpoints fairly, then refute or reframe them',
+      'Wrap with an actionable takeaway or rallying call'
+    ],
+    voice: [
+      'First-person or close-third perspective with confident, persuasive language',
+      'Blend storytelling and logic; vary sentence rhythm to keep rhetoric fresh',
+      'Use rhetorical devices sparingly but intentionally'
+    ],
+    signature: [
+      'Add a “What I’m watching” or “If nothing changes” breakout to emphasise stakes',
+      'Finish with a memorable line that reinforces the author’s stance'
+    ]
+  },
+  story: {
+    label: 'narrative story',
+    purpose: 'transport readers through characters, conflict, and resolution',
+    structure: [
+      'Open in medias res or with a vivid moment that spotlights tension',
+      'Introduce characters through action, dialogue, and internal stakes',
+      'Escalate the conflict with twists or complications that feel specific to this topic',
+      'Resolve with emotional payoff and hint at an echo or aftermath'
+    ],
+    voice: [
+      'Imaginative, scene-driven voice that balances description with dialogue',
+      'Maintain a consistent point of view and let small details make the world feel real',
+      'Ensure each paragraph advances the plot or reveals something new'
+    ],
+    signature: [
+      'Use dialogue tags and pacing to differentiate speakers naturally',
+      'Include a reflective beat or moral that connects the story to the category context'
+    ]
+  },
+  guide: {
+    label: 'step-by-step guide',
+    purpose: 'equip readers to accomplish a task with confidence',
+    structure: [
+      'Begin with a succinct promise of what readers will achieve and prerequisites',
+      'Lay out sequential steps with numbered headings and checkpoints',
+      'Add pro tips, cautions, and tool recommendations per step',
+      'Close with maintenance advice, troubleshooting, or next-level ideas'
+    ],
+    voice: [
+      'Supportive, coach-like voice that anticipates questions and removes friction',
+      'Use direct address (“you”) and verbs that encourage action',
+      'Surface quick wins and deeper dives so beginners and experts both find value'
+    ],
+    signature: [
+      'Provide at least one checklist or decision tree in HTML list form',
+      'Highlight common pitfalls or FAQs in callout boxes'
+    ]
+  },
+  listicle: {
+    label: 'curated listicle',
+    purpose: 'deliver punchy highlights that readers can skim or explore',
+    structure: [
+      'Kick off with an energetic intro that frames the list’s theme and selection criteria',
+      'Organise numbered sections with compelling subheadlines and supporting detail',
+      'Balance facts, anecdotes, and data points across items to avoid repetition',
+      'Wrap with a summary that ties the list back to the broader trend'
+    ],
+    voice: [
+      'Upbeat, authoritative tone that feels curated rather than generic',
+      'Use vivid verbs, unexpected comparisons, and rhetorical hooks per item',
+      'Keep paragraphs tight but give enough specificity to feel substantive'
+    ],
+    signature: [
+      'Include at least one comparative table or quick-score card if the topic allows',
+      'Add a “How to use this list” or “Next moves” section at the end'
+    ]
+  }
+}
+
+function buildFormatInstructionBlock(format: BlogContentFormat, category: string) {
+  const guideline = FORMAT_GUIDELINES[format]
+  const structureLines = guideline.structure.map((line) => `- ${line}`).join('\n')
+  const voiceLines = guideline.voice.map((line) => `- ${line}`).join('\n')
+  const signatureLines = guideline.signature.map((line) => `- ${line}`).join('\n')
+
+  return `Format focus: ${guideline.label} for the ${category} space.\nPurpose: ${guideline.purpose}.\nStructure guidelines:\n${structureLines}\nVoice & pacing:\n${voiceLines}\nSignature touches to ensure uniqueness:\n${signatureLines}`
 }
 
 // Generate blog post using ChatGPT
@@ -84,7 +242,7 @@ async function requestChatCompletion(model: string, prompt: string) {
 }
 
 export async function generateBlogWithChatGPT(options: BlogGenerationOptions): Promise<GeneratedBlog> {
-  const { topic, category, tone, length, seoOptimized } = options
+  const { topic, category, tone, length, seoOptimized, includeImages, format, customPrompt } = options
 
   const lengthWords = {
     short: '800-1200',
@@ -93,58 +251,77 @@ export async function generateBlogWithChatGPT(options: BlogGenerationOptions): P
     'very-long': '12000-15000'
   }
 
-  const prompt = `Create a comprehensive, interactive blog post about "${topic}" for the ${category} category.
+  const today = new Date()
+  const todayLabel = today.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
+  const currentYear = today.getFullYear()
 
-Requirements:
+  const formatInstructionBlock = buildFormatInstructionBlock(format, category)
+  const imageInstruction = includeImages
+    ? 'Include 3 image suggestions that align with pivotal beats in the piece.'
+    : 'Return an empty array for images if no visuals feel essential.'
+
+  const openingInstruction = customPrompt
+    ? `Create a ${FORMAT_GUIDELINES[format].label} that fulfils the editor's brief for readers who follow ${category} developments.`
+    : `Create a ${FORMAT_GUIDELINES[format].label} about "${topic}" for readers who follow ${category} developments.`
+
+  const prompt = `${openingInstruction}
+
+${customPrompt ? `Editor brief (highest priority):
+${customPrompt}
+
+` : ''}${formatInstructionBlock}
+
+General requirements:
+- Today is ${todayLabel}. Anchor datelines, timelines, and outlook to ${currentYear} and beyond unless the topic explicitly references an earlier era.
 - Tone: ${tone}
-- Length: ${lengthWords[length]} words
-- SEO optimized: ${seoOptimized}
-- Include trending keywords naturally
-- Make it highly engaging and shareable
-- Include practical insights and actionable advice
-- Structure with clear headings and subheadings
-- MUST include detailed comparison tables where relevant
-- MUST include statistical data tables
-- MUST include step-by-step guides with numbered lists
-- Add relevant infographic suggestions
-- Include interactive elements like polls, quizzes, or checklists
-- Use rich formatting: bold, italic, quotes, code blocks
-- Add call-to-action sections
-- Include expert quotes or case studies
+- Target length: ${lengthWords[length]} words (flex as needed to keep pacing natural)
+- SEO optimised: ${seoOptimized}. Thread priority keywords organically through headings and copy.
+- Craft bespoke hooks and section headings—avoid boilerplate phrasing.
+- Use semantic HTML5 (<section>, <article>, <aside>, <figure>, <h2>, <h3>, <p>, <blockquote>, <ul>, <ol>) to structure the article.
+- Weave in concrete specifics (names, dates, locations, stats, quotes) that make this piece feel reported.
+- ${imageInstruction}
+- Suggest 1-3 interactive elements that genuinely fit a ${format} experience (e.g. timeline, checklist, poll, Q&A).
+- Conclude with a distinctive takeaway tied to what readers should do or watch next.
+- Avoid generic filler, self-referential AI language, or motivational clichés.
 
-IMPORTANT: Format the content with HTML for better styling:
-- Use proper HTML table tags for detailed tables with styling classes
-- Include divs with classes for special sections
-- Add styling for interactive elements
-- Use semantic HTML5 tags
+CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
+- Add author attribution at the top: "By ImZenx (AI-Assisted)"
+- Include an "AI Summary" section with 3 bullet points at the very beginning
+- Add an "Editor's Note" section after the introduction with a personal observation (150-200 words)
+- Include "Key Takeaways" section at the end with 3-5 bullet insights
+- Append AI transparency notice at the very end: "⚙️ This article was generated using AI tools and reviewed by ImZenx before publishing."
+- Ensure content is 100% original, factually accurate, and adds unique perspective
+- Avoid copying from web sources - rephrase and add analysis
 
-Include 3-5 relevant copyright-free image suggestions with:
-- Detailed description for image search
-- Alt text for accessibility
-- Suggested placement in content
-
-Please provide the response in the following JSON format:
+Return valid JSON with the following schema:
 {
-  "title": "Engaging title for the blog post",
-  "content": "Full blog post content in HTML format with proper styling, tables, and interactive elements",
-  "excerpt": "Brief 2-3 sentence summary",
-  "seoTitle": "SEO optimized title (60 characters max)",
-  "seoDescription": "SEO meta description (150-160 characters)",
-  "tags": ["relevant", "tags", "for", "the", "post"],
-  "readTime": estimated_read_time_in_minutes,
+  "title": "Specific headline tailored to this story",
+  "content": "Full HTML article following the instructions above, INCLUDING the author attribution, editorial sections, and AI transparency notice",
+  "excerpt": "2-3 sentence summary",
+  "seoTitle": "<=60 character SEO title",
+  "seoDescription": "150-160 character meta description",
+  "tags": ["keyword", "another"],
+  "readTime": minutes_estimate,
+  "aiSummary": ["3 concise bullet points summarizing the article"],
+  "editorsNote": "Personal observation or commentary from ImZenx perspective (150-200 words)",
+  "keyTakeaways": ["3-5 actionable insights or conclusions"],
   "images": [
     {
-      "description": "Detailed description for finding copyright-free image",
-      "alt": "Alt text for accessibility",
-      "placement": "after_introduction|before_conclusion|in_section_2",
-      "caption": "Image caption text"
+      "description": "Image brief",
+      "alt": "Accessible alt text",
+      "placement": "hero|after_introduction|in_section_2|before_conclusion",
+      "caption": "Optional caption"
     }
   ],
   "interactiveElements": [
     {
-      "type": "table|quiz|checklist|poll",
+      "type": "timeline|checklist|poll|quiz|callout|table",
       "title": "Element title",
-      "content": "Element content or HTML"
+      "content": "HTML or Markdown snippet"
     }
   ]
 }`
@@ -174,7 +351,7 @@ Please provide the response in the following JSON format:
 
 // Generate blog post using Gemini
 export async function generateBlogWithGemini(options: BlogGenerationOptions): Promise<GeneratedBlog> {
-  const { topic, category, tone, length, seoOptimized } = options
+  const { topic, category, tone, length, seoOptimized, includeImages, format, customPrompt } = options
 
   const lengthWords = {
     short: '800-1200',
@@ -183,60 +360,79 @@ export async function generateBlogWithGemini(options: BlogGenerationOptions): Pr
     'very-long': '12000-15000'
   }
 
+  const today = new Date()
+  const todayLabel = today.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
+  const currentYear = today.getFullYear()
+
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" })
 
-  const prompt = `Create a comprehensive, interactive blog post about "${topic}" for the ${category} category.
+  const formatInstructionBlock = buildFormatInstructionBlock(format, category)
+  const imageInstruction = includeImages
+    ? 'Include 3 image suggestions that align with key beats in the narrative.'
+    : 'Return an empty array for images if no visual support is required.'
 
-Requirements:
+  const openingInstruction = customPrompt
+    ? `Write a ${FORMAT_GUIDELINES[format].label} that delivers on the editor's brief for an audience immersed in ${category}.`
+    : `Write a ${FORMAT_GUIDELINES[format].label} about "${topic}" for an audience immersed in ${category}.`
+
+  const prompt = `${openingInstruction}
+
+${customPrompt ? `Editor brief (highest priority):
+${customPrompt}
+
+` : ''}${formatInstructionBlock}
+
+General guidance:
+- Today is ${todayLabel}; situate developments in ${currentYear} or upcoming months unless the topic demands historical framing.
 - Tone: ${tone}
-- Length: ${lengthWords[length]} words
-- SEO optimized: ${seoOptimized}
-- Include trending keywords naturally
-- Make it highly engaging and shareable
-- Include practical insights and actionable advice
-- Structure with clear headings and subheadings
-- MUST include detailed comparison tables where relevant
-- MUST include statistical data tables
-- MUST include step-by-step guides with numbered lists
-- Add relevant infographic suggestions
-- Include interactive elements like polls, quizzes, or checklists
-- Use rich formatting: bold, italic, quotes, code blocks
-- Add call-to-action sections
-- Include expert quotes or case studies
+- Target length: ${lengthWords[length]} words (flex slightly to preserve flow)
+- SEO optimised: ${seoOptimized}. Thread priority keywords through headings, standfirst, and body copy naturally.
+- Invent distinctive headlines and transitions tailored to this topic.
+- Use semantic HTML5 structure (<section>, <article>, <aside>, <figure>, <h2>, <h3>, <p>, <blockquote>, <ul>, <ol>).
+- Include vivid, verifiable specifics (names, stats, quotes, timeline markers).
+- ${imageInstruction}
+- Suggest interactiveElements that suit a ${format} experience (timeline, checklist, poll, quiz, callout, table, etc.).
+- Close with a reader-centric takeaway or next-step prompt.
+- Never mention that you are an AI.
 
-IMPORTANT: Format the content with HTML for better styling:
-- Use proper HTML table tags for detailed tables with styling classes
-- Include divs with classes for special sections
-- Add styling for interactive elements
-- Use semantic HTML5 tags
+CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
+- Add author attribution at the top: "By ImZenx (AI-Assisted)"
+- Include an "AI Summary" section with 3 bullet points at the very beginning
+- Add an "Editor's Note" section after the introduction with a personal observation (150-200 words)
+- Include "Key Takeaways" section at the end with 3-5 bullet insights
+- Append AI transparency notice at the very end: "⚙️ This article was generated using AI tools and reviewed by ImZenx before publishing."
+- Ensure content is 100% original, factually accurate, and adds unique perspective
+- Avoid copying from web sources - rephrase and add analysis
 
-Include 3-5 relevant copyright-free image suggestions with:
-- Detailed description for image search
-- Alt text for accessibility
-- Suggested placement in content
-
-Please provide the response in the following JSON format:
+Respond with valid JSON using this schema:
 {
-  "title": "Engaging title for the blog post",
-  "content": "Full blog post content in HTML format with proper styling, tables, and interactive elements",
-  "excerpt": "Brief 2-3 sentence summary",
-  "seoTitle": "SEO optimized title (60 characters max)",
-  "seoDescription": "SEO meta description (150-160 characters)",
-  "tags": ["relevant", "tags", "for", "the", "post"],
-  "readTime": estimated_read_time_in_minutes,
+  "title": "Specific headline",
+  "content": "HTML article INCLUDING the author attribution, editorial sections, and AI transparency notice",
+  "excerpt": "Short summary",
+  "seoTitle": "<=60 char SEO title",
+  "seoDescription": "150-160 char meta description",
+  "tags": ["keywords"],
+  "readTime": minutes_estimate,
+  "aiSummary": ["3 concise bullet points summarizing the article"],
+  "editorsNote": "Personal observation or commentary from ImZenx perspective (150-200 words)",
+  "keyTakeaways": ["3-5 actionable insights or conclusions"],
   "images": [
     {
-      "description": "Detailed description for finding copyright-free image",
-      "alt": "Alt text for accessibility",
-      "placement": "after_introduction|before_conclusion|in_section_2",
-      "caption": "Image caption text"
+      "description": "Image brief",
+      "alt": "Alt text",
+      "placement": "hero|after_introduction|in_section_2|before_conclusion",
+      "caption": "Optional caption"
     }
   ],
   "interactiveElements": [
     {
-      "type": "table|quiz|checklist|poll",
+      "type": "timeline|checklist|poll|quiz|callout|table",
       "title": "Element title",
-      "content": "Element content or HTML"
+      "content": "HTML or Markdown"
     }
   ]
 }`

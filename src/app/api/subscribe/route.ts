@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { sendNewsletterWelcomeEmail } from '@/lib/email'
 import type { TablesInsert, TablesUpdate } from '@/types/database.types'
 import crypto from 'crypto'
 
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    const shouldSendWelcomeEmail =
+      !existing || !existing.is_verified || existing.unsubscribed_at !== null
 
     if (existing) {
       if (existing.is_verified) {
@@ -84,6 +88,14 @@ export async function POST(request: NextRequest) {
       .from('email_subscriptions')
       .update(verificationUpdate)
       .eq('email', normalizedEmail)
+
+    if (shouldSendWelcomeEmail) {
+      const emailResult = await sendNewsletterWelcomeEmail(normalizedEmail)
+
+      if (!emailResult.success) {
+        console.error('Failed to send newsletter welcome email:', emailResult.error)
+      }
+    }
 
     return NextResponse.json({
       message: 'Successfully subscribed! Welcome to Zenx Blog newsletter.',

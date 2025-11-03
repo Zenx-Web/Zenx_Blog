@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { CalendarIcon, ClockIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
+import AdSlot from '@/components/AdSlot'
 
 interface BlogPost {
   id: string
@@ -26,6 +27,15 @@ interface BlogListProps {
   category?: string
   searchQuery?: string
 }
+
+const FEED_AD_INTERVAL = 3
+const INLINE_FEED_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_INLINE ?? '7311203366'
+const LEADERBOARD_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD ?? '3950542855'
+const MID_FEED_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_MID_FEED ?? '7311203366'
+const FOOTER_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_FOOTER ?? '3950542855'
+type FeedItem =
+  | { type: 'post'; post: BlogPost }
+  | { type: 'ad'; id: string; span: number }
 
 export default function BlogList({ 
   initialPosts = [], 
@@ -74,6 +84,30 @@ export default function BlogList({
     if (!posts.length) return posts
     return posts.filter((post) => !hiddenPostIds.has(post.id))
   }, [posts, hiddenPostIds])
+
+  const feedItems = useMemo(() => {
+    if (visiblePosts.length === 0) {
+      return [] as FeedItem[]
+    }
+
+    const items: FeedItem[] = []
+    visiblePosts.forEach((post, index) => {
+      const position = index + 1
+      const columnIndex = index % 3
+
+      items.push({ type: 'post', post })
+
+      if (position % FEED_AD_INTERVAL === 0) {
+        // Wide ad after every third post to break rows
+  items.push({ type: 'ad', id: `feed-ad-wide-${index}`, span: 3 })
+      } else if (columnIndex === 2) {
+        // End of each row (3-column layout)
+  items.push({ type: 'ad', id: `feed-ad-inline-${index}`, span: 1 })
+      }
+    })
+
+    return items
+  }, [visiblePosts])
 
   const categorySummary = useMemo(() => {
     const tally = new Map<string, number>()
@@ -155,6 +189,17 @@ export default function BlogList({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="mb-8">
+        <AdSlot
+          slotId={LEADERBOARD_AD_SLOT}
+          format="auto"
+          variant="bare"
+          className="w-full"
+          slotStyle={{ display: 'block', minHeight: 90 }}
+          title="Sponsored Leaderboard"
+        />
+      </section>
+
       {heroPost && !searchQuery && (
         <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 text-white">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
@@ -280,6 +325,18 @@ export default function BlogList({
               )
             })}
           </div>
+
+          <div className="mt-8">
+            <AdSlot
+              slotId={MID_FEED_AD_SLOT}
+              format="fluid"
+              layout="in-article"
+              variant="minimal"
+              className="w-full"
+              slotStyle={{ display: 'block', margin: '0 auto' }}
+              title="Featured Partner"
+            />
+          </div>
         </section>
       )}
 
@@ -341,50 +398,83 @@ export default function BlogList({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {visiblePosts.map((post) => (
-                <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                  <article className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                    {post.featured_image && (
-                      <div className="relative h-48">
-                        <Image
-                          src={post.featured_image}
-                          alt={post.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute top-4 left-4">
-                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(post.category)}`}>
-                            {post.category.replace('-', ' ')}
-                          </span>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {feedItems.map((item) => {
+                if (item.type === 'post') {
+                  const post = item.post
+                  return (
+                    <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
+                      <article className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                        {post.featured_image && (
+                          <div className="relative h-48">
+                            <Image
+                              src={post.featured_image}
+                              alt={post.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute top-4 left-4">
+                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(post.category)}`}>
+                                {post.category.replace('-', ' ')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-2">
+                            {post.title}
+                          </h3>
+                          <p className="text-gray-600 mb-4 line-clamp-3">
+                            {post.excerpt}
+                          </p>
+                          <div className="flex items-center text-sm text-gray-500 space-x-4">
+                            <div className="flex items-center">
+                              <CalendarIcon className="h-4 w-4 mr-1" />
+                              {formatDateSafe(post.published_at, 'MMM dd', 'TBD')}
+                            </div>
+                            <div className="flex items-center">
+                              <ClockIcon className="h-4 w-4 mr-1" />
+                              {(post.read_time ?? 0)}m
+                            </div>
+                            <div className="flex items-center">
+                              <EyeIcon className="h-4 w-4 mr-1" />
+                              {(post.views ?? 0).toLocaleString()}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <div className="p-6">
-                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-2">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 mb-4 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex items-center text-sm text-gray-500 space-x-4">
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          {formatDateSafe(post.published_at, 'MMM dd', 'TBD')}
-                        </div>
-                        <div className="flex items-center">
-                          <ClockIcon className="h-4 w-4 mr-1" />
-                          {(post.read_time ?? 0)}m
-                        </div>
-                        <div className="flex items-center">
-                          <EyeIcon className="h-4 w-4 mr-1" />
-                          {(post.views ?? 0).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-              ))}
+                      </article>
+                    </Link>
+                  )
+                }
+
+                const spanClasses = item.span === 3 ? 'md:col-span-2 lg:col-span-3' : ''
+
+                return (
+                  <div key={item.id} className={spanClasses}>
+                    <AdSlot
+                      slotId={INLINE_FEED_AD_SLOT}
+                      format="fluid"
+                      layout="in-article"
+                      variant="bare"
+                      showLabel={false}
+                      className="w-full text-center"
+                      slotStyle={{ display: 'block', margin: item.span === 3 ? '24px auto' : '16px auto' }}
+                      title={item.span === 3 ? 'Sponsored Highlight' : 'Sponsored'}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-12">
+              <AdSlot
+                slotId={FOOTER_AD_SLOT}
+                format="auto"
+                variant="panel"
+                className="mx-auto max-w-3xl"
+                slotStyle={{ minHeight: 250 }}
+                title="Sponsored Offers"
+              />
             </div>
 
             {/* Load More Button */}

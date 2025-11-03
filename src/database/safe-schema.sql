@@ -111,7 +111,9 @@ CREATE TRIGGER update_blog_posts_updated_at BEFORE UPDATE ON blog_posts
 CREATE OR REPLACE FUNCTION increment_post_views(post_slug TEXT)
 RETURNS VOID AS $$
 BEGIN
-    UPDATE blog_posts SET views = views + 1 WHERE slug = post_slug;
+  UPDATE blog_posts
+  SET views = COALESCE(views, 0) + 1
+  WHERE slug = post_slug;
 END;
 $$ language 'plpgsql';
 

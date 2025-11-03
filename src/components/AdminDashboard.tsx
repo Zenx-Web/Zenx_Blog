@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { SparklesIcon, EyeIcon } from '@heroicons/react/24/outline'
 import '../styles/enhanced-blog.css'
 import type { TrendingTopic as TrendingTopicSource } from '@/lib/trending'
@@ -100,6 +100,8 @@ const createEmptyUserProfileDraft = (): UserProfileDraft => ({
   monthly: false,
 })
 
+const POSTS_PER_PAGE = 5
+
 export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
@@ -112,6 +114,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [isPublishing, setIsPublishing] = useState(false)
   const [managedPosts, setManagedPosts] = useState<BlogPost[]>([])
   const [postFilter, setPostFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [postSearchTerm, setPostSearchTerm] = useState('')
+  const [postPage, setPostPage] = useState(1)
   const [isLoadingPosts, setIsLoadingPosts] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const [postActionId, setPostActionId] = useState<string | null>(null)
@@ -141,6 +145,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [length, setLength] = useState('medium')
   const [includeImages, setIncludeImages] = useState(true)
   const [seoOptimized, setSeoOptimized] = useState(true)
+  const [customPrompt, setCustomPrompt] = useState('')
   
   // Simple search state for existing topics
   const [searchTerm, setSearchTerm] = useState('')
@@ -153,6 +158,48 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const filteredTopics = trendingTopics.filter(topic => {
     return topic.topic.toLowerCase().includes(searchTerm.toLowerCase())
   })
+
+  const hasPromptForGeneration = customPrompt.trim().length > 0
+
+  const sortedPosts = useMemo(() => {
+    return [...managedPosts].sort((a, b) => {
+      const aDate = Date.parse(a.published_at || a.updated_at || a.created_at || '') || 0
+      const bDate = Date.parse(b.published_at || b.updated_at || b.created_at || '') || 0
+      return bDate - aDate
+    })
+  }, [managedPosts])
+
+  const filteredPosts = useMemo(() => {
+    const query = postSearchTerm.trim().toLowerCase()
+    if (!query) {
+      return sortedPosts
+    }
+
+    return sortedPosts.filter((post) => {
+      const title = post.title?.toLowerCase() ?? ''
+      const slug = post.slug.toLowerCase()
+      const categoryMatch = post.category.toLowerCase()
+      return (
+        title.includes(query) ||
+        slug.includes(query) ||
+        categoryMatch.includes(query)
+      )
+    })
+  }, [sortedPosts, postSearchTerm])
+
+  const totalPosts = filteredPosts.length
+  const totalPages = Math.max(1, Math.ceil(totalPosts / POSTS_PER_PAGE))
+  const currentPage = Math.min(postPage, totalPages)
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE
+  const paginatedPosts = filteredPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
+  const showingFrom = totalPosts === 0 ? 0 : startIndex + 1
+  const showingTo = totalPosts === 0 ? 0 : Math.min(startIndex + paginatedPosts.length, totalPosts)
+
+  useEffect(() => {
+    if (postPage > totalPages) {
+      setPostPage(totalPages)
+    }
+  }, [postPage, totalPages])
 
   const userStatusFilters: Array<{ label: string; value: UserStatusFilter }> = [
     { label: 'All', value: 'all' },
@@ -777,6 +824,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }
   }
 
+  const clearSelectedTopic = () => {
+    setSelectedTopic(null)
+    setGeneratedBlog(null)
+    setSavedPost(null)
+  }
+
   // Auto-detect tone from topic
   const detectToneFromTopic = (topicText: string): string => {
     const text = topicText.toLowerCase()
@@ -806,20 +859,32 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   }
 
   const generateBlog = async () => {
-    if (!selectedTopic) {
-      showNotification('warning', 'Select a topic before starting AI generation.')
+    const topicSelection = selectedTopic
+    const trimmedPrompt = customPrompt.trim()
+    const hasCustomPrompt = trimmedPrompt.length > 0
+
+    if (!topicSelection && !hasCustomPrompt) {
+      showNotification('warning', 'Select a topic or provide a custom prompt before starting AI generation.')
       return
     }
 
-    const topic = selectedTopic
+  const topicLabel = topicSelection ? topicSelection.topic : trimmedPrompt
+
+    if (!topicLabel) {
+      showNotification('error', 'Unable to determine a topic for generation.')
+      return
+    }
+
     setIsGenerating(true)
     setSavedPost(null)
 
-    // Get the detected category for API call
-    const detectedCategory = topic.category ? 
-      topic.category.toLowerCase().replace(/\s+/g, '-') : 
-      detectCategoryFromTopic(topic.topic)
-    const categoryForGeneration = category || detectedCategory
+    const detectedCategory = topicSelection
+      ? (topicSelection.category
+          ? topicSelection.category.toLowerCase().replace(/\s+/g, '-')
+          : detectCategoryFromTopic(topicSelection.topic))
+      : detectCategoryFromTopic(topicLabel)
+
+    const categoryForGeneration = (category || detectedCategory || 'world-news')
 
     try {
       const response = await fetch('/api/admin/generate', {
@@ -828,12 +893,14 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic: topic.topic,
+          topic: topicSelection ? topicSelection.topic : '',
           category: categoryForGeneration,
           tone,
           length,
           includeImages,
-          seoOptimized
+          seoOptimized,
+          customPrompt: hasCustomPrompt ? trimmedPrompt : undefined,
+          markTopicUsed: Boolean(topicSelection)
         })
       })
 
@@ -844,14 +911,15 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         if (data.blogPost) {
           setSavedPost(mapPostRecord(data.blogPost))
         }
-        // Update topic as used
-        setTrendingTopics(prev => 
-          prev.map(t => 
-            t.topic === topic.topic ? { ...t, used: true } : t
-          )
-        )
         
-        // Show success message
+        if (topicSelection) {
+          setTrendingTopics(prev => 
+            prev.map(t => 
+              t.topic === topicSelection.topic ? { ...t, used: true } : t
+            )
+          )
+        }
+        
         if (data.message) {
           console.log('✅ Generation successful:', data.message)
           showNotification('success', 'Blog generated successfully!')
@@ -1093,31 +1161,82 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         )}
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Manage Existing Posts</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Publish, unpublish, or remove posts that have already been generated.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: 'All', value: 'all' as const },
-                { label: 'Published', value: 'published' as const },
-                { label: 'Drafts', value: 'draft' as const }
-              ].map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setPostFilter(filter.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                    postFilter === filter.value
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                  }`}
+            <div className="flex flex-col w-full gap-3 sm:flex-row sm:items-center lg:w-auto">
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="search"
+                  value={postSearchTerm}
+                  onChange={(event) => {
+                    setPostSearchTerm(event.target.value)
+                    setPostPage(1)
+                  }}
+                  className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-12 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="Search title, slug, or category"
+                  aria-label="Search posts"
+                />
+                <svg
+                  className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
                 >
-                  {filter.label}
-                </button>
-              ))}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z"
+                  />
+                </svg>
+                {postSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostSearchTerm('')
+                      setPostPage(1)
+                    }}
+                    className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'All', value: 'all' as const },
+                  { label: 'Published', value: 'published' as const },
+                  { label: 'Drafts', value: 'draft' as const }
+                ].map((filter) => (
+                  <button
+                    key={filter.value}
+                    onClick={() => {
+                      setPostFilter(filter.value)
+                      setPostPage(1)
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      postFilter === filter.value
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1136,15 +1255,17 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
             </div>
           )}
 
-          {!isLoadingPosts && managedPosts.length === 0 && !postError ? (
+          {!isLoadingPosts && filteredPosts.length === 0 && !postError ? (
             <div className="text-center py-12 text-gray-500">
-              <p className="font-medium">No posts found for this filter.</p>
+              <p className="font-medium">
+                {postSearchTerm ? 'No posts match your search.' : 'No posts found for this filter.'}
+              </p>
               <p className="text-sm mt-1">Generate or import posts to see them listed here.</p>
             </div>
           ) : null}
 
           <div className="space-y-4">
-            {managedPosts.map((post) => {
+            {paginatedPosts.map((post) => {
               const isProcessing = postActionId === post.id
               return (
                 <div
@@ -1193,7 +1314,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                             : 'Publish'}
                       </button>
                       <button
-                        onClick={() => window.open(`/blog/${post.slug}`, '_blank')}
+                        onClick={() => window.open(`/blog/${post.slug}`, '_blank', 'noopener,noreferrer')}
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
                       >
                         View
@@ -1213,6 +1334,37 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
               )
             })}
           </div>
+
+          {filteredPosts.length > 0 && (
+            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-gray-500">
+                Showing {showingFrom}-{showingTo} of {totalPosts} {totalPosts === 1 ? 'post' : 'posts'}.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPostPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 ${
+                    currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setPostPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPosts === 0}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 ${
+                    currentPage === totalPages || totalPosts === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -1632,6 +1784,50 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
               </div>
             )}
 
+            <div className="mb-6 rounded-lg border border-blue-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">🧠 Custom AI Prompt (Optional)</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Provide specific instructions for the AI. Leave this blank to rely solely on a selected trending topic.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSelectedTopic}
+                  disabled={!selectedTopic}
+                  className={`text-sm font-medium transition ${selectedTopic ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 cursor-not-allowed'}`}
+                >
+                  {selectedTopic ? 'Clear selected topic' : 'No topic selected'}
+                </button>
+              </div>
+              <textarea
+                value={customPrompt}
+                onChange={(event) => setCustomPrompt(event.target.value)}
+                rows={4}
+                placeholder="Example: Write a conversational explainer about how AI-powered news curation is changing journalism, include expert quotes, a comparison table, and a step-by-step reader action plan."
+                className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-sm text-gray-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+              <div className="mt-3 flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  {selectedTopic
+                    ? 'The AI will blend this brief with the highlighted trending topic.'
+                    : 'The AI will rely entirely on this prompt plus the settings below.'}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span>{customPrompt.trim().length} characters</span>
+                  <button
+                    type="button"
+                    onClick={() => setCustomPrompt('')}
+                    disabled={!customPrompt}
+                    className={`font-medium transition ${customPrompt ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 cursor-not-allowed'}`}
+                  >
+                    Clear prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Generation Controls */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
               <h3 className="font-medium text-gray-900 mb-3">
@@ -1683,9 +1879,10 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   </label>
                   <select
                     value={category}
-                    disabled
-                    className={`w-full p-3 border rounded-lg bg-gray-100 text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      selectedTopic ? 'border-green-300' : 'border-gray-300'
+                    onChange={(e) => setCategory(e.target.value)}
+                    disabled={Boolean(selectedTopic)}
+                    className={`w-full p-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      selectedTopic ? 'border-green-300 bg-gray-100 text-gray-700' : 'border-gray-300 bg-white text-gray-900'
                     }`}
                   >
                     <option value="technology" className="text-gray-900 font-medium">💻 Technology</option>
@@ -1724,13 +1921,17 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm text-gray-500">
-                    {selectedTopic ? 'Pick the mode and length you want, then launch AI generation.' : 'Select a topic to enable AI generation.'}
+                    {selectedTopic
+                      ? 'Pick the mode and length you want, then launch AI generation.'
+                      : hasPromptForGeneration
+                        ? 'Using your custom prompt. Choose settings and generate when ready.'
+                        : 'Select a topic or add a custom prompt to enable AI generation.'}
                   </div>
                   <button
                     onClick={generateBlog}
-                    disabled={!selectedTopic || isGenerating}
+                    disabled={(!selectedTopic && !hasPromptForGeneration) || isGenerating}
                     className={`bg-green-600 text-white px-5 py-3 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors ${
-                      !selectedTopic || isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
+                      (!selectedTopic && !hasPromptForGeneration) || isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
                     }`}
                   >
                     <SparklesIcon className="w-4 h-4" />

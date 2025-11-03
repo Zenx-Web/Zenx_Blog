@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateEnhancedBlogContent, BlogGenerationOptions, GeneratedBlog } from '@/lib/ai'
+import { processContentForPublication } from '@/lib/content-enhancer'
+import type { BlogContentFormat } from '@/types/content'
+import { BLOG_CONTENT_FORMAT_OPTIONS } from '@/types/content'
 import { supabaseAdmin } from '@/lib/supabase'
 import { ensureAdminApiAccess } from '@/lib/auth'
 import type { TablesInsert, TablesUpdate } from '@/types/database.types'
@@ -16,14 +19,36 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 Starting blog generation...')
     const body = await request.json()
-    const { topic, category, tone, length, includeImages, seoOptimized } = body
 
-    console.log('📝 Generation request:', { topic, category, tone, length })
+    const rawTopic = typeof body.topic === 'string' ? body.topic.trim() : ''
+    const customPrompt = typeof body.customPrompt === 'string' ? body.customPrompt.trim() : ''
+    const topic = rawTopic || customPrompt
+  const categoryInput = typeof body.category === 'string' ? body.category.trim() : ''
+    const tone = body.tone
+    const length = body.length
+    const includeImages = body.includeImages
+    const seoOptimized = body.seoOptimized
+    const format = body.format
+    const markTopicUsed = Boolean(body.markTopicUsed)
 
-    if (!topic || !category) {
-      console.log('❌ Missing required fields')
+  const resolvedCategoryInput = categoryInput || inferCategoryFromText(topic)
+  const categorySlug = slugify(resolvedCategoryInput)
+  const categoryName = toTitleCase(categorySlug.replace(/-/g, ' ')) || 'World News'
+
+    console.log('📝 Generation request:', {
+      topic,
+      requestedCategory: categoryInput || null,
+      resolvedCategory: categorySlug,
+      tone,
+      length,
+      markTopicUsed,
+      hasCustomPrompt: Boolean(customPrompt)
+    })
+
+    if (!topic) {
+      console.log('❌ Missing topic or prompt')
       return NextResponse.json(
-        { success: false, error: 'Topic and category are required' },
+        { success: false, error: 'Topic or custom prompt is required' },
         { status: 400 }
       )
     }
@@ -38,11 +63,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize category to ensure it matches database slug requirements
-    const categorySlug = slugify(category)
-    const categoryName = toTitleCase(categorySlug.replace(/-/g, ' ')) || 'World News'
+    if (!categorySlug) {
+      console.log('❌ Could not resolve category')
+      return NextResponse.json(
+        { success: false, error: 'Unable to determine a category for this prompt' },
+        { status: 400 }
+      )
+    }
 
     // Ensure category exists in database (auto-create if missing)
     await ensureCategoryExists(categorySlug, categoryName)
+
+    const selectedFormat = resolveRequestedFormat(format, topic, categoryName, tone)
 
     const options: BlogGenerationOptions = {
       topic,
@@ -50,7 +82,9 @@ export async function POST(request: NextRequest) {
       tone: tone || 'engaging',
       length: length || 'medium',
       includeImages: includeImages || false,
-      seoOptimized: seoOptimized !== false
+      seoOptimized: seoOptimized !== false,
+      format: selectedFormat,
+      customPrompt: customPrompt || undefined
     }
 
     console.log('🤖 Generating content with AI...')
@@ -85,11 +119,19 @@ export async function POST(request: NextRequest) {
         ? generatedBlog.fetchedImages[0].url 
         : null
 
+    // Enhance content with ImZenx branding and AI disclosures
+    const enhancedContent = processContentForPublication(generatedBlog.content, {
+      aiSummary: generatedBlog.aiSummary,
+      editorsNote: generatedBlog.editorsNote,
+      keyTakeaways: generatedBlog.keyTakeaways,
+      forceRebrand: false
+    })
+
     // Save to database as draft
     const insertPayload: TablesInsert<'blog_posts'> = {
       title: generatedBlog.title,
       slug,
-      content: generatedBlog.content,
+      content: enhancedContent, // Use enhanced content with branding
       excerpt: generatedBlog.excerpt,
       featured_image: featuredImageUrl,
       category: categorySlug,
@@ -118,17 +160,19 @@ export async function POST(request: NextRequest) {
     console.log('✅ Blog post saved successfully')
 
     // Mark topic as used (ignore errors for this)
-    try {
-      const topicUpdate: TablesUpdate<'trending_topics'> = {
-        used: true
-      }
+    if (markTopicUsed && rawTopic) {
+      try {
+        const topicUpdate: TablesUpdate<'trending_topics'> = {
+          used: true
+        }
 
-      await supabaseAdmin
-        .from('trending_topics')
-        .update(topicUpdate)
-        .eq('topic', topic)
-    } catch (updateError) {
-      console.warn('⚠️ Could not mark topic as used:', updateError)
+        await supabaseAdmin
+          .from('trending_topics')
+          .update(topicUpdate)
+          .eq('topic', rawTopic)
+      } catch (updateError) {
+        console.warn('⚠️ Could not mark topic as used:', updateError)
+      }
     }
 
     return NextResponse.json({
@@ -152,335 +196,476 @@ export async function POST(request: NextRequest) {
 
 // Fallback blog generation for when AI fails
 function createFallbackBlog(options: BlogGenerationOptions): GeneratedBlog {
-  const { topic, category, length, tone } = options
+  const { topic, category, length, format } = options
   const normalizedCategory = toTitleCase(category.replace(/-/g, ' ')) || 'World News'
-  const primaryKeyword = topic.split(' ')[0]?.toLowerCase() || 'insight'
-
   const readTime = getReadTimeFromLength(length)
 
-  if (tone === 'interactive' || tone === 'engaging' || normalizedCategory.toLowerCase() === 'entertainment') {
-    return buildInteractiveStoryFallback({ topic, normalizedCategory, length, readTime })
+  switch (format) {
+    case 'news':
+      return buildNewsFallback({ topic, normalizedCategory, readTime })
+    case 'feature':
+      return buildFeatureFallback({ topic, normalizedCategory, readTime })
+    case 'opinion':
+      return buildOpinionFallback({ topic, normalizedCategory, readTime })
+    case 'story':
+      return buildInteractiveStoryFallback({ topic, normalizedCategory, length, readTime })
+    case 'guide':
+      return buildGuideFallback({ topic, normalizedCategory, readTime })
+    case 'listicle':
+      return buildListicleFallback({ topic, normalizedCategory, readTime })
+    case 'analysis':
+    default:
+      return buildAnalysisFallback({ topic, normalizedCategory, readTime })
   }
+}
 
-  const longFormInsights = `
-<section class="section analytics">
-  <h2 class="section-title">Deep-Dive Analytics</h2>
-  <p>The ${normalizedCategory.toLowerCase()} space around <strong>${topic}</strong> continues to expand. Analysts are tracking new data sources, venture investments, and policy responses every quarter.</p>
-  <table class="insight-table">
-    <thead>
-      <tr>
-        <th>Indicator</th>
-        <th>2023 Benchmark</th>
-        <th>2024 Year-to-Date</th>
-        <th>Trend</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Search Interest Index</td>
-        <td>64</td>
-        <td>83</td>
-        <td><span class="trend-up">▲ +19%</span></td>
-      </tr>
-      <tr>
-        <td>Funding Announcements</td>
-        <td>42</td>
-        <td>57</td>
-        <td><span class="trend-up">▲ +15</span></td>
-      </tr>
-      <tr>
-        <td>Consumer Adoption</td>
-        <td>28%</td>
-        <td>36%</td>
-        <td><span class="trend-up">▲ +8pp</span></td>
-      </tr>
-    </tbody>
-  </table>
-</section>
+function buildFallbackTags(normalizedCategory: string, topic: string): string[] {
+  const categoryTag = normalizedCategory.toLowerCase().replace(/\s+/g, '-')
+  const keyword = topic.split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'trend'
+  const secondary = topic.split(/\s+/)[1]?.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'insight'
+  return Array.from(new Set([categoryTag, keyword, secondary, 'zenx-fallback'])).slice(0, 4)
+}
 
-<section class="section case-studies">
-  <h2 class="section-title">Case Studies & Field Notes</h2>
-  <article>
-    <h3>Innovation Spotlight</h3>
-    <p>A cross-functional team at a leading organisation used the principles behind <strong>${topic}</strong> to unlock new revenue streams within six months. Their approach combined rapid prototyping, stakeholder workshops, and weekly telemetry dashboards.</p>
-  </article>
-  <article>
-    <h3>Operational Playbook</h3>
-    <p>Operations leads mapped dependencies across departments, created a governance model, and defined success metrics before the first pilot rolled out. The result was a 28% reduction in implementation delays.</p>
-  </article>
-</section>
+function buildNewsFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const dateline = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
 
-<section class="section roadmap">
-  <h2 class="section-title">Six-Step Roadmap</h2>
-  <ol class="roadmap">
-    <li><strong>Assess Readiness:</strong> Run stakeholder surveys and inventory core capabilities.</li>
-    <li><strong>Design the Blueprint:</strong> Document user journeys, risk controls, and data flows.</li>
-    <li><strong>Build the Coalition:</strong> Identify executive sponsors and empowered delivery teams.</li>
-    <li><strong>Pilot Fast:</strong> Launch a constrained pilot with a learning agenda and real-time metrics.</li>
-    <li><strong>Scale Intelligently:</strong> Standardise on shared components, automate oversight, and formalise playbooks.</li>
-    <li><strong>Measure Impact:</strong> Tie outcomes to financial, customer, and sustainability KPIs.</li>
-  </ol>
-</section>
-`
+  const title = `${topic}: Latest Developments in ${normalizedCategory}`
+  const tags = buildFallbackTags(normalizedCategory, topic)
 
-  const extendedResearch = `
-<section class="section regional">
-  <h2 class="section-title">Regional & Sector Breakdown</h2>
-  <p>Adoption curves differ across regions. Mature markets prioritise optimisation, while emerging markets leapfrog directly into agile, cloud-first deployments.</p>
-  <ul class="insight-list">
-    <li><strong>North America:</strong> Focused on platform consolidation and regulatory resilience.</li>
-    <li><strong>APAC:</strong> Moves quickly with mobile-first experiences and government-backed pilots.</li>
-    <li><strong>Europe:</strong> Emphasises trust, privacy, and cross-border interoperability.</li>
-  </ul>
-</section>
-
-<section class="section scenarios">
-  <h2 class="section-title">Scenario Planning for Leaders</h2>
-  <p>Teams should prepare for multiple future states. Use the framework below to stress-test strategy and investment decisions.</p>
-  <table class="scenario-table">
-    <thead>
-      <tr>
-        <th>Scenario</th>
-        <th>Signals</th>
-        <th>Strategic Move</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Accelerated Adoption</td>
-        <td>Policy incentives, ecosystem alliances</td>
-        <td>Double down on product velocity and partner integrations</td>
-      </tr>
-      <tr>
-        <td>Regulatory Drag</td>
-        <td>Audit fatigue, fragmented compliance</td>
-        <td>Invest in transparent reporting and compliance toolkits</td>
-      </tr>
-      <tr>
-        <td>Fragmented Innovation</td>
-        <td>Competing standards, niche pilots</td>
-        <td>Create a federated architecture and nurture community sandboxes</td>
-      </tr>
-    </tbody>
-  </table>
-</section>
-
-<section class="section toolkit">
-  <h2 class="section-title">Toolkit & Measurement Dashboard</h2>
-  <p>Equip teams with shared resources to accelerate delivery:</p>
-  <ul class="insight-list">
-    <li><strong>Capability Canvas:</strong> Maps processes, tooling, and talent requirements.</li>
-    <li><strong>Experiment Ledger:</strong> Tracks hypothesis, owner, start date, signal, and decision.</li>
-    <li><strong>Impact Dashboard:</strong> Combines financial, customer, and societal KPIs with live data feeds.</li>
-  </ul>
-</section>
-`
-
-  const appendix = `
-<section class="section appendix">
-  <h2 class="section-title">Appendix: Additional Resources</h2>
-  <ul class="insight-list">
-    <li><strong>Key Reports:</strong> Gartner Emerging Tech Radar, McKinsey State of ${normalizedCategory}, World Economic Forum Insights.</li>
-    <li><strong>Communities:</strong> Industry Slack groups, regional councils, academic consortiums.</li>
-    <li><strong>Learning Path:</strong> Foundations (Week 1-2), Use Cases (Week 3-4), Advanced Scaling (Week 5+).</li>
-  </ul>
-</section>
-
-<section class="section faq">
-  <h2 class="section-title">Frequently Asked Questions</h2>
-  <details>
-    <summary>What problem does ${topic} solve today?</summary>
-    <p>It closes critical gaps in experience, efficiency, or compliance by aligning technology, process, and people decisions.</p>
-  </details>
-  <details>
-    <summary>How do we secure executive sponsorship?</summary>
-    <p>Showcase a quantified business case, highlight customer impact, and define how risks will be governed.</p>
-  </details>
-  <details>
-    <summary>Where should teams begin?</summary>
-    <p>Start with discovery workshops, a shared glossary, and a lightweight pilot that surfaces fast feedback.</p>
-  </details>
-</section>
-`
-
-  const interactiveElements = `
-<section class="section checklist">
-  <h2 class="section-title">Action Checklist</h2>
-  <ul class="interactive-checklist">
-    <li><input type="checkbox" /> Map stakeholders and decision cadence</li>
-    <li><input type="checkbox" /> Define success metrics and data sources</li>
-    <li><input type="checkbox" /> Set up a weekly insight review ritual</li>
-    <li><input type="checkbox" /> Share learnings with the wider organisation</li>
-  </ul>
-</section>
-
-<section class="section poll">
-  <h2 class="section-title">Pulse Survey</h2>
-  <p class="poll-intro">Where is your organisation on the ${topic} maturity curve?</p>
-  <ul class="poll-options">
-    <li>🚀 Experimenting with early pilots</li>
-    <li>📊 Scaling proven initiatives</li>
-    <li>🏢 Embedding as a core capability</li>
-    <li>🧭 Still defining the opportunity</li>
-  </ul>
-</section>
-`
-
-  const longSections = length === 'short'
-    ? ''
-    : length === 'medium'
-      ? longFormInsights
-      : length === 'long'
-        ? `${longFormInsights}${interactiveElements}`
-        : `${longFormInsights}${interactiveElements}${extendedResearch}${appendix}`
-  
-  return {
-    title: `${topic}: Strategic ${normalizedCategory} Intelligence Brief`,
-    content: `
-<article class="enhanced-blog-content">
-  <header class="hero">
-    <p class="eyebrow">${normalizedCategory} Insight Report</p>
-    <h1>${topic}</h1>
-    <p class="hero-lede">A strategic, data-backed exploration designed to brief leaders, strategists, and creators on the latest developments shaping ${normalizedCategory.toLowerCase()} in 2025.</p>
+  const content = `
+<article class="fallback-news">
+  <header class="news-hero">
+    <p class="news-dateline">${normalizedCategory} • ${dateline}</p>
+    <h1>${title}</h1>
+    <p class="lede">Officials and analysts confirmed fresh movement around <strong>${topic}</strong>, signalling a new chapter for the ${normalizedCategory.toLowerCase()} landscape.</p>
   </header>
 
-  <section class="section overview">
-    <h2 class="section-title">Executive Summary</h2>
-    <p>${topic} has accelerated from a niche conversation to a mainstream agenda item. Organisations that capture its momentum now are improving customer experience, unlocking new revenue, and strengthening resilience.</p>
-    <ul class="insight-list">
-      <li><strong>Why it matters:</strong> Signals from investors, policymakers, and end users point to a sustained growth arc.</li>
-      <li><strong>Opportunity horizon:</strong> Early adopters are documenting double-digit efficiency gains and richer storytelling opportunities.</li>
-      <li><strong>Risks to monitor:</strong> Regulatory uncertainty, skills gaps, and data quality can disrupt scaling plans if left unmanaged.</li>
+  <section class="news-section">
+    <h2>What Happened</h2>
+    <p>Sources close to the matter described a two-stage update: a rapid response overnight followed by a coordinated announcement at dawn. Local teams reported measurable shifts in sentiment within the first six hours.</p>
+    <ul>
+      <li><strong>Location:</strong> Key activity clustered around major ${normalizedCategory.toLowerCase()} hubs.</li>
+      <li><strong>Impact:</strong> Early data shows a 14% spike in related search traffic.</li>
+      <li><strong>Stakeholders:</strong> Policy makers, creators, and platform operators all weighed in.</li>
     </ul>
   </section>
 
-  <section class="section fundamentals">
-    <h2 class="section-title">Foundational Concepts</h2>
-    <p>To communicate or build around ${topic}, align teams on shared definitions first.</p>
-    <div class="key-concepts">
-      <div>
-        <h3>Core Idea</h3>
-        <p>${topic} describes a shift in how organisations design experiences, products, and operations within ${normalizedCategory.toLowerCase()}.</p>
-      </div>
-      <div>
-        <h3>Enabling Forces</h3>
-        <p>Advances in analytics, automation, and platform ecosystems are lowering barriers to experimentation.</p>
-      </div>
-      <div>
-        <h3>Headwinds</h3>
-        <p>Talent shortages, fragmented tooling, and compliance requirements still slow momentum in legacy environments.</p>
-      </div>
-    </div>
+  <section class="news-section">
+    <h2>Voices on the Record</h2>
+    <blockquote>
+      “We have been tracking ${topic.toLowerCase()} for months, and today’s pivot is the clearest signal yet that momentum is shifting.”
+      <span>— Regional strategy lead</span>
+    </blockquote>
+    <blockquote>
+      “Communities asked for clarity. Delivering these updates now builds the runway for what comes next.”
+      <span>— Community programme director</span>
+    </blockquote>
   </section>
 
-  <section class="section data-snapshot">
-    <h2 class="section-title">Data Snapshot</h2>
-    <p>Signals compiled from analyst briefings, investor notes, and public datasets.</p>
+  <section class="news-section">
+    <h2>Timeline at a Glance</h2>
+    <ol class="timeline">
+      <li><span>+00:00</span> Monitoring teams flag unusual chatter tied to ${topic}.</li>
+      <li><span>+06:00</span> Advisory note dispatched to partners outlining likely scenarios.</li>
+      <li><span>+09:30</span> Officials confirm the primary update and publish supporting documentation.</li>
+      <li><span>+12:00</span> Follow-up briefing answers community questions and sets expectations.</li>
+    </ol>
+  </section>
+
+  <section class="news-section">
+    <h2>What’s Next</h2>
+    <p>Analysts anticipate two immediate checkpoints: a detailed audit within 72 hours and a second-stage reveal scheduled for early next week. Teams are urged to prepare briefing materials, align messaging, and collect field-level feedback.</p>
+    <div class="news-callout">
+      <h3>Key Numbers</h3>
+      <ul>
+        <li>Projected audience reach: <strong>1.8M</strong></li>
+        <li>Engagement variance (24h): <strong>+9.3%</strong></li>
+        <li>Confidence interval on forecasts: <strong>±2.1%</strong></li>
+      </ul>
+    </div>
+  </section>
+</article>
+`
+
+  return {
+    title,
+    content,
+    excerpt: `Dateline update: ${topic} triggers fresh movement across the ${normalizedCategory.toLowerCase()} beat, with teams mobilising for next steps.`,
+    seoTitle: `${topic} Update | ${normalizedCategory} News Report`,
+    seoDescription: `Latest on ${topic} for ${normalizedCategory.toLowerCase()} followers. Includes timeline, expert quotes, and what happens next.`,
+    tags,
+    readTime
+  }
+}
+
+function buildAnalysisFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const tags = buildFallbackTags(normalizedCategory, topic)
+  const title = `${topic}: Strategic Analysis for ${normalizedCategory}`
+
+  const content = `
+<article class="fallback-analysis">
+  <header>
+    <h1>${title}</h1>
+    <p class="standfirst">A concise briefing that connects context, data, and forward-looking guidance around <strong>${topic}</strong>.</p>
+  </header>
+
+  <section>
+    <h2>Context That Matters</h2>
+    <p>${normalizedCategory} leaders have tracked ${topic.toLowerCase()} as an emerging signal. The convergence of policy, platform shifts, and user behaviour sets the stage for a decisive quarter.</p>
+    <ul>
+      <li><strong>Market posture:</strong> Demand indicators jumped 11% quarter-on-quarter.</li>
+      <li><strong>Regulatory pulse:</strong> Two new consultations mention ${topic.toLowerCase()} explicitly.</li>
+      <li><strong>Capital flows:</strong> Venture announcements eclipsed the 2024 average within six weeks.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Signals & Metrics</h2>
     <table class="insight-table">
       <thead>
         <tr>
-          <th>Metric</th>
+          <th>Indicator</th>
           <th>Latest Reading</th>
-          <th>What to Watch</th>
+          <th>Implication</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Conversation Volume</td>
-          <td>+41% YoY</td>
-          <td>Upcoming conference cycles and policy announcements</td>
+          <td>Audience sentiment</td>
+          <td>Net +18</td>
+          <td>Users reward clear storytelling around the change</td>
         </tr>
         <tr>
-          <td>Investment Pace</td>
-          <td>$2.4B disclosed in H1 2025</td>
-          <td>Early-stage activity in cross-border collaborations</td>
+          <td>Operational risk</td>
+          <td>Moderate</td>
+          <td>Requires playbooks and rapid feedback loops</td>
         </tr>
         <tr>
-          <td>Adoption Rate</td>
-          <td>32% of surveyed teams piloting initiatives</td>
-          <td>Readiness to move pilots to production</td>
+          <td>Competitive velocity</td>
+          <td>High</td>
+          <td>Expect rivals to launch adjacent experiments</td>
         </tr>
       </tbody>
     </table>
   </section>
 
-  <section class="section opportunities">
-    <h2 class="section-title">Opportunities & Differentiators</h2>
-    <p>Use the matrix below to position initiatives and messaging.</p>
-    <table class="matrix-table">
-      <thead>
-        <tr>
-          <th>Opportunity</th>
-          <th>Value Proposition</th>
-          <th>Recommended Next Step</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Experience Innovation</td>
-          <td>Richer storytelling, personalised journeys, immersive education</td>
-          <td>Prototype with a cross-functional squad and capture rapid feedback</td>
-        </tr>
-        <tr>
-          <td>Operational Efficiency</td>
-          <td>Automation, real-time telemetry, streamlined governance</td>
-          <td>Stand up a command centre with clear escalation paths</td>
-        </tr>
-        <tr>
-          <td>New Revenue Streams</td>
-          <td>Premium services, data-as-a-product, partnership ecosystems</td>
-          <td>Map adjacent customer pains and launch a co-innovation sprint</td>
-        </tr>
-      </tbody>
-    </table>
+  <section>
+    <h2>Implications & Scenarios</h2>
+    <p>Teams should model at least two contrasting futures—accelerated adoption versus cautious rollout—then map resource requirements accordingly.</p>
+    <ol>
+      <li><strong>Accelerated adoption:</strong> Prepare for surge demand, incremental revenue, and expanded support operations.</li>
+      <li><strong>Measured rollout:</strong> Invest in education, change management, and transparency dashboards.</li>
+    </ol>
   </section>
 
-  ${longSections}
-
-  <section class="section best-practices">
-    <h2 class="section-title">Best Practices Checklist</h2>
-    <ul class="insight-list">
-      <li><strong>Align on narrative:</strong> Document the "why now" story for internal and external stakeholders.</li>
-      <li><strong>Share artefacts:</strong> Publish decision logs, architecture diagrams, and customer journeys weekly.</li>
-      <li><strong>Govern smartly:</strong> Blend automated compliance checks with human review to maintain trust.</li>
-      <li><strong>Invest in learning:</strong> Stand up enablement tracks so teams can build confidence quickly.</li>
+  <section>
+    <h2>Recommended Moves</h2>
+    <ul class="action-checklist">
+      <li>Host a 30-minute sync to align narrative, metrics, and owner responsibilities.</li>
+      <li>Publish a sharable FAQ that addresses the top five stakeholder questions.</li>
+      <li>Define success metrics for the first 30 and 90 days, with owners attached.</li>
     </ul>
   </section>
+</article>
+`
 
-  <section class="section quotes">
-    <h2 class="section-title">Expert Soundbites</h2>
-    <blockquote>"Leaders who treat ${topic.toLowerCase()} as a cross-discipline capability—not a single project—are the ones reporting resilient growth." <span>- Industry Research Director</span></blockquote>
-    <blockquote>"The most successful teams experiment in public, invite community feedback, and keep measuring outcomes against north-star metrics." <span>- Product Strategy Lead</span></blockquote>
+  return {
+    title,
+    content,
+    excerpt: `A strategic briefing on ${topic} tailored for ${normalizedCategory} operators, covering context, metrics, and next moves.`,
+    seoTitle: `${topic} Analysis | ${normalizedCategory} Briefing`,
+    seoDescription: `Strategic analysis of ${topic} for ${normalizedCategory.toLowerCase()} teams. Includes metrics, scenarios, and recommended actions.`,
+    tags,
+    readTime
+  }
+}
+
+function buildFeatureFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const tags = buildFallbackTags(normalizedCategory, topic)
+  const title = `Inside the ${topic} Moment Transforming ${normalizedCategory}`
+
+  const content = `
+<article class="fallback-feature">
+  <header>
+    <h1>${title}</h1>
+    <p class="feature-lede">On a rain-slick morning, the first hints of ${topic.toLowerCase()} drifted through the ${normalizedCategory.toLowerCase()} community. This is how the story unfolded.</p>
+  </header>
+
+  <section>
+    <h2>Scene One: Dawn Briefings</h2>
+    <p>The control room lights hummed while playlists from the night crew faded. Analysts pinned sticky notes to a wall-sized map, connecting whispers they had heard from creators, regulators, and fans.</p>
   </section>
 
-  <section class="section resources">
-    <h2 class="section-title">Resources & Next Steps</h2>
-    <ul class="resource-list">
-      <li>📘 <strong>Briefing Deck:</strong> Summarise the opportunity, customer impact, and planned experiments.</li>
-      <li>🧪 <strong>Experiment Template:</strong> Define hypothesis, owner, audience, timeframe, and success signal.</li>
-      <li>📊 <strong>Measurement Framework:</strong> Combine leading indicators (engagement, satisfaction) with lagging metrics (revenue, retention).</li>
-    </ul>
-    <div class="cta-card">
-      <h3>Call to Action</h3>
-      <p>Schedule a 45-minute working session to align teams, shortlist experiments, and assign executive sponsors. Momentum compounds when the first win is shared broadly.</p>
-    </div>
+  <section>
+    <h2>Meeting the Protagonists</h2>
+    <p>Marin, a senior editor, had tracked ${topic.toLowerCase()} for months. Meanwhile, Dev, an engineer with a poet’s heart, was already prototyping an interactive visual to make sense of the wave.</p>
+    <blockquote>
+      “When you feel a shift like this, you don’t wait for memo approval—you start telling the story,” Marin said, scribbling headlines in a notebook.
+    </blockquote>
   </section>
 
-  <footer class="section closing">
-    <h2 class="section-title">Key Takeaways</h2>
-    <ul class="insight-list">
-      <li>${topic} is reshaping ${normalizedCategory.toLowerCase()} conversations in boardrooms, studios, and labs.</li>
-      <li>Roadmaps that balance quick wins with structural investments outperform reactive approaches.</li>
-      <li>Transparent communication and shared learning loops keep teams aligned in fast-moving environments.</li>
-    </ul>
-    <p class="closing-note">Bookmark this briefing and revisit it after your next planning sprint. Update the metrics, document lessons learned, and keep iterating.</p>
+  <section>
+    <h2>The Turn</h2>
+    <p>By midday, community leads confirmed what rumours hinted: ${topic.toLowerCase()} was no longer experimental. A chorus of group chats, private channels, and press briefings synced in real time. Teams chose transparency over mystery.</p>
+  </section>
+
+  <section>
+    <h2>A Closing Reflection</h2>
+    <p>As sunset hit the newsroom windows, Dev exported the final visual. Marin filed a feature that read more like a cinematic script than a bulletin. Their work reminded everyone that storytelling shapes how ${normalizedCategory.toLowerCase()} evolves.</p>
+  </section>
+
+  <footer class="feature-outro">
+    <p><strong>Why it matters:</strong> Moments like ${topic.toLowerCase()} become cultural markers when teams move quickly, share openly, and invite communities to co-create the narrative.</p>
   </footer>
 </article>
-`,
-    excerpt: `A strategic briefing on ${topic} for ${normalizedCategory} teams. Explore data-backed insights, detailed roadmaps, and actionable checklists to guide your next initiative.`,
-    seoTitle: `${topic} Report: ${normalizedCategory} Intelligence 2025`,
-    seoDescription: `In-depth ${normalizedCategory.toLowerCase()} report on ${topic}. Includes metrics, roadmap, scenarios, and actionable guidance for 2025 planning.`,
-    tags: [normalizedCategory.toLowerCase(), primaryKeyword, 'strategy', 'analysis', 'roadmap', '2025'],
+`
+
+  return {
+    title,
+    content,
+    excerpt: `Narrative coverage of ${topic} through the eyes of the practitioners shaping ${normalizedCategory.toLowerCase()} right now.`,
+    seoTitle: `${topic} Feature Story | ${normalizedCategory}`,
+    seoDescription: `Feature-style storytelling that captures how ${topic} is reshaping ${normalizedCategory.toLowerCase()} from the inside.`,
+    tags,
+    readTime
+  }
+}
+
+function buildOpinionFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const tags = buildFallbackTags(normalizedCategory, topic)
+  const title = `Opinion: ${topic} Is the Wake-Up Call ${normalizedCategory} Needs`
+
+  const content = `
+<article class="fallback-opinion">
+  <header>
+    <h1>${title}</h1>
+    <p class="opinion-lede">We have talked about ${topic.toLowerCase()} casually for years. Watching this week’s developments, I am convinced the moment for decisive action has arrived.</p>
+  </header>
+
+  <section>
+    <h2>The Thesis</h2>
+    <p>${normalizedCategory} leaders should treat ${topic.toLowerCase()} as a generational inflection point. Delay will cost the community trust, relevance, and creative freedom.</p>
+  </section>
+
+  <section>
+    <h2>Evidence & Experience</h2>
+    <p>I have spent the past season inside war rooms, community calls, and late-night debugging sessions. The teams who embraced ${topic.toLowerCase()} early already ship richer experiences and learn faster.</p>
+    <ul>
+      <li>Evidence: <strong>47%</strong> of engaged audiences now rank ${topic.toLowerCase()} among their top-three expectations.</li>
+      <li>Evidence: Organisations who piloted it saw <strong>2x</strong> retention in their highest-value cohorts.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Addressing the Counterpoint</h2>
+    <p>Some argue that rushing ahead introduces risk. They are not wrong. Yet stalling guarantees irrelevance. The answer is disciplined experimentation, transparent reporting, and community co-design—none of which happen by waiting.</p>
+  </section>
+
+  <section>
+    <h2>My Call to Action</h2>
+    <p>Convene your decision makers this week. Share the data, plan a pilot, invite the community to scrutinise your approach, and commit to reporting back. ${topic} deserves more than hallway conversations—it needs principled leadership.</p>
+  </section>
+
+  <footer>
+    <p><strong>Next move:</strong> Draft the stakeholder memo tonight. Send it before the next cycle of rumours fills the vacuum.</p>
+  </footer>
+</article>
+`
+
+  return {
+    title,
+    content,
+    excerpt: `A personal take arguing that ${topic} demands bold leadership across the ${normalizedCategory.toLowerCase()} ecosystem.`,
+    seoTitle: `${topic} Opinion | ${normalizedCategory} Editorial`,
+    seoDescription: `Opinion column on why ${topic} should be the top priority for ${normalizedCategory.toLowerCase()} teams and what leaders must do next.`,
+    tags,
+    readTime
+  }
+}
+
+function buildGuideFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const tags = buildFallbackTags(normalizedCategory, topic)
+  const title = `How to Roll Out ${topic} Across Your ${normalizedCategory} Team`
+
+  const content = `
+<article class="fallback-guide">
+  <header>
+    <h1>${title}</h1>
+    <p class="guide-lede">Follow these steps to introduce ${topic.toLowerCase()} with confidence, clarity, and measurable impact.</p>
+  </header>
+
+  <section>
+    <h2>Before You Start</h2>
+    <ul>
+      <li>Confirm the outcomes you expect (e.g. growth, loyalty, trust).</li>
+      <li>Assign a cross-functional crew: product, editorial, operations, data.</li>
+      <li>Map the current workflow so you know where ${topic.toLowerCase()} slots in.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Step-by-Step Playbook</h2>
+    <ol>
+      <li><strong>Design the pilot:</strong> Pick a small but meaningful use case and establish success metrics.</li>
+      <li><strong>Draft transparent messaging:</strong> Let your audience know what is happening and why.</li>
+      <li><strong>Build and test:</strong> Ship the experience to a small audience, monitor feedback hourly, and fix friction fast.</li>
+      <li><strong>Debrief:</strong> Collect qualitative notes, dashboards, and transcripts to refine your approach.</li>
+      <li><strong>Roll out widely:</strong> Document the updated workflow, automate checks, and celebrate wins.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Checklist</h2>
+    <ul class="guide-checklist">
+      <li><input type="checkbox" /> Stakeholders aligned on success metrics</li>
+      <li><input type="checkbox" /> Support team briefed with FAQs</li>
+      <li><input type="checkbox" /> Monitoring dashboard live before launch</li>
+      <li><input type="checkbox" /> Post-launch retro scheduled</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><strong>Keep iterating:</strong> Revisit the checklist every month and update your playbook as ${topic.toLowerCase()} evolves.</p>
+  </footer>
+</article>
+`
+
+  return {
+    title,
+    content,
+    excerpt: `A practical playbook that walks ${normalizedCategory.toLowerCase()} teams through adopting ${topic}.`,
+    seoTitle: `${topic} Implementation Guide`,
+    seoDescription: `Step-by-step guide for ${normalizedCategory.toLowerCase()} teams rolling out ${topic}. Includes prerequisites, checklist, and rollout plan.`,
+    tags,
+    readTime
+  }
+}
+
+function buildListicleFallback({
+  topic,
+  normalizedCategory,
+  readTime
+}: {
+  topic: string
+  normalizedCategory: string
+  readTime: number
+}): GeneratedBlog {
+  const tags = buildFallbackTags(normalizedCategory, topic)
+  const title = `7 Standout Plays for ${topic} in ${normalizedCategory}`
+
+  const listItems = [
+    {
+      heading: 'Lead with a signature story',
+      description: `Kick off with a narrative moment that brings ${topic.toLowerCase()} to life. Pair it with a crisp stat to anchor credibility.`,
+      stat: '92% of audiences recall the key message when a story opens the experience.'
+    },
+    {
+      heading: 'Build collaborative rituals',
+      description: 'Run weekly syncs where product, editorial, and community teams surface signals and decide the next experiment.',
+      stat: 'Teams that co-create rituals report 1.6x faster iteration cycles.'
+    },
+    {
+      heading: 'Ship a data-backed explainer',
+      description: `Create a lightweight dashboard or infographic to demystify why ${topic.toLowerCase()} matters right now.`,
+      stat: 'Explainers increase trust scores by an average of 12 points.'
+    },
+    {
+      heading: 'Host an open Q&A',
+      description: 'Invite your community to ask anything. Capture questions to inform future content and product decisions.',
+      stat: 'Live Q&A formats drive 3x higher engagement in the following week.'
+    },
+    {
+      heading: 'Document the playbook',
+      description: 'Turn lessons into a living manual so new collaborators can move quickly without repeating mistakes.',
+      stat: 'Playbook-first teams reduce onboarding time by 28%.'
+    },
+    {
+      heading: 'Pair with partners',
+      description: 'Co-create with adjacent organisations to expand reach and diversify perspective.',
+      stat: 'Partnership launches expand audience reach by 37% on average.'
+    },
+    {
+      heading: 'Review and reset',
+      description: 'Schedule a reflective checkpoint every quarter to retire stale tactics and double down on what works.',
+      stat: 'Intentional resets correlate with 2.3x retention among power users.'
+    }
+  ]
+
+  const listMarkup = listItems
+    .map(
+      (item, index) => `
+      <article class="listicle-item">
+        <h3>${index + 1}. ${item.heading}</h3>
+        <p>${item.description}</p>
+        <p class="listicle-stat">Key stat: ${item.stat}</p>
+      </article>`
+    )
+    .join('\n')
+
+  const content = `
+<article class="fallback-listicle">
+  <header>
+    <h1>${title}</h1>
+    <p class="listicle-lede">From storytelling to operational rituals, these seven moves help teams translate <strong>${topic}</strong> into tangible wins.</p>
+  </header>
+  ${listMarkup}
+  <footer class="listicle-outro">
+    <p><strong>Next steps:</strong> Pick two plays to execute this month, and create a shared doc to track experiments, owners, and outcomes.</p>
+  </footer>
+</article>
+`
+
+  return {
+    title,
+    content,
+    excerpt: `A curated list of seven plays teams can use to activate ${topic} across the ${normalizedCategory.toLowerCase()} ecosystem.`,
+    seoTitle: `${topic} Ideas List | ${normalizedCategory}`,
+    seoDescription: `Seven actionable ideas for bringing ${topic} to life in ${normalizedCategory.toLowerCase()}. Each play includes a standout data point.`,
+    tags,
     readTime
   }
 }
@@ -511,6 +696,8 @@ function buildInteractiveStoryFallback({
   length: BlogGenerationOptions['length']
   readTime: number
 }): GeneratedBlog {
+  const baseTags = buildFallbackTags(normalizedCategory, topic)
+  const tags = Array.from(new Set([...baseTags, 'interactive-story', 'scenario', 'playbook', 'thriller'])).slice(0, 5)
   const sceneIntensity = length === 'very-long'
     ? ['Tense opening shift', 'Neighborhood rumors', 'Unexpected ally', 'Confrontation', 'Resolution']
     : length === 'long'
@@ -656,7 +843,7 @@ function buildInteractiveStoryFallback({
     excerpt: `An immersive, choice-driven retelling of "${topic}" crafted for ${normalizedCategory.toLowerCase()} storytellers and safety strategists. Engage with branching prompts, tactical checklists, and crowd-poll endings.`,
     seoTitle: `${topic} Interactive Story | ${normalizedCategory} Scenario Playbook`,
     seoDescription: `Interactive storyline inspired by "${topic}". Includes decision points, tactical checklists, alternate endings, and community engagement prompts for ${normalizedCategory.toLowerCase()} teams.`,
-    tags: [normalizedCategory.toLowerCase(), 'interactive-story', 'thriller', 'scenario', 'playbook', '2025'],
+    tags,
     readTime,
     images: [
       {
@@ -719,6 +906,79 @@ function generateSceneSynopsis(scene: string, topic: string) {
 }
 
 const CATEGORY_COLORS = ['#8B5CF6', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#6366F1']
+const SUPPORTED_FORMATS = new Set<BlogContentFormat>(
+  BLOG_CONTENT_FORMAT_OPTIONS.map((option) => option.value)
+)
+
+function resolveRequestedFormat(
+  requestedFormat: unknown,
+  topic: string,
+  category: string,
+  tone?: string | null
+): BlogContentFormat {
+  if (typeof requestedFormat === 'string') {
+    const normalized = requestedFormat.trim().toLowerCase() as BlogContentFormat
+    if (SUPPORTED_FORMATS.has(normalized)) {
+      return normalized
+    }
+  }
+
+  return detectFormatFromTopic(topic, category, tone)
+}
+
+function detectFormatFromTopic(
+  topic: string,
+  category: string,
+  tone?: string | null
+): BlogContentFormat {
+  const text = `${topic} ${category}`.toLowerCase()
+  const cleanTone = tone?.toLowerCase() ?? ''
+
+  if (text.includes('breaking') || text.includes('live update') || text.includes('news')) {
+    return 'news'
+  }
+
+  if (
+    text.includes('how to') ||
+    text.includes('step-by-step') ||
+    text.includes('guide') ||
+    text.includes('tutorial')
+  ) {
+    return 'guide'
+  }
+
+  if (
+    text.includes('top ') ||
+    text.includes('best ') ||
+    text.includes('roundup') ||
+    /\b\d{1,2}\s+(ideas|ways|tips|trends|facts)/.test(text)
+  ) {
+    return 'listicle'
+  }
+
+  if (text.includes('opinion') || text.includes('why i think') || text.includes('editorial')) {
+    return 'opinion'
+  }
+
+  if (text.includes('story') || text.includes('diary') || text.includes('chronicle') || cleanTone === 'interactive') {
+    return 'story'
+  }
+
+  if (
+    text.includes('profile') ||
+    text.includes('inside') ||
+    text.includes('behind the scenes') ||
+    text.includes('spotlight')
+  ) {
+    return 'feature'
+  }
+
+  if (text.includes('analysis') || text.includes('report') || text.includes('deep dive')) {
+    return 'analysis'
+  }
+
+  return cleanTone === 'casual' ? 'feature' : 'analysis'
+}
 
 function slugify(value: string) {
   if (!value) return 'world-news'
@@ -800,4 +1060,79 @@ async function ensureUniqueSlug(baseSlug: string) {
     uniqueSlug = `${normalizedSlug}-${counter}`
     counter += 1
   }
+}
+
+function inferCategoryFromText(input: string): string {
+  const text = input.toLowerCase()
+
+  if (
+    text.includes('startup') ||
+    text.includes('market') ||
+    text.includes('stock') ||
+    text.includes('economy') ||
+    text.includes('business') ||
+    text.includes('vc') ||
+    text.includes('revenue')
+  ) {
+    return 'business'
+  }
+
+  if (
+    text.includes('ai') ||
+    text.includes('tech') ||
+    text.includes('software') ||
+    text.includes('cyber') ||
+    text.includes('app') ||
+    text.includes('robot') ||
+    text.includes('nft') ||
+    text.includes('crypto')
+  ) {
+    return 'technology'
+  }
+
+  if (
+    text.includes('fitness') ||
+    text.includes('wellness') ||
+    text.includes('travel') ||
+    text.includes('lifestyle') ||
+    text.includes('recipe') ||
+    text.includes('fashion')
+  ) {
+    return 'lifestyle'
+  }
+
+  if (
+    text.includes('match') ||
+    text.includes('team') ||
+    text.includes('league') ||
+    text.includes('world cup') ||
+    text.includes('olympic') ||
+    text.includes('player')
+  ) {
+    return 'sports'
+  }
+
+  if (
+    text.includes('film') ||
+    text.includes('movie') ||
+    text.includes('music') ||
+    text.includes('celebrity') ||
+    text.includes('netflix') ||
+    text.includes('series')
+  ) {
+    return 'entertainment'
+  }
+
+  if (
+    text.includes('election') ||
+    text.includes('policy') ||
+    text.includes('government') ||
+    text.includes('diplomatic') ||
+    text.includes('global') ||
+    text.includes('conflict')
+  ) {
+    return 'world-news'
+  }
+
+  return 'world-news'
 }

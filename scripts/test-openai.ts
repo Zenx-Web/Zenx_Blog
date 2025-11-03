@@ -35,6 +35,7 @@ async function main() {
     length: "medium",
     includeImages: false,
     seoOptimized: true,
+    format: "analysis",
   });
 
   console.log("Title:", result.title);

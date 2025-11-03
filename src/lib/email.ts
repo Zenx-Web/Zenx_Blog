@@ -323,6 +323,81 @@ Unsubscribe: ${unsubscribeUrl}
 }
 
 /**
+ * Welcome email for newsletter subscribers
+ */
+export async function sendNewsletterWelcomeEmail(subscriberEmail: string) {
+  const unsubscribeUrl = `${SITE_URL}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`
+  const subject = `🎉 You're in! Welcome to the Zenx newsletter`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+        <style>
+          body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #F9FAFB; }
+          .container { max-width: 620px; margin: 0 auto; background: #ffffff; }
+          .header { background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%); padding: 48px 32px; text-align: center; }
+          .header h1 { color: #ffffff; margin: 0; font-size: 30px; }
+          .content { padding: 40px 36px; color: #374151; }
+          .content h2 { margin-top: 0; font-size: 24px; color: #1F2937; }
+          .highlight { background: #EEF2FF; border-radius: 10px; padding: 18px 20px; margin: 28px 0; }
+          .highlight p { margin: 8px 0; color: #4338CA; font-weight: 600; }
+          .cta { display: inline-block; padding: 14px 28px; background: #2563EB; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 600; margin-top: 24px; }
+          .footer { background: #F3F4F6; padding: 28px 32px; text-align: center; color: #6B7280; font-size: 13px; }
+          .footer a { color: #2563EB; text-decoration: none; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Thanks for subscribing 🎉</h1>
+          </div>
+          <div class="content">
+            <h2>Hi there!</h2>
+            <p>You're now part of the Zenx inner circle. We'll keep you ahead of the curve with stories that are rising fast and conversations you do not want to miss.</p>
+            <div class="highlight">
+              <p>Here's what to expect next:</p>
+              <ul style="padding-left: 18px; margin: 14px 0; color: #4B5563;">
+                <li style="margin: 10px 0;">🔥 AI-curated trending topics before they go viral</li>
+                <li style="margin: 10px 0;">📬 Instant alerts when we drop a must-read</li>
+                <li style="margin: 10px 0;">📊 Exclusive insights, hacks, and deep dives</li>
+              </ul>
+            </div>
+            <p>Craving something right now? Explore the latest hits below and start reading.</p>
+            <div style="text-align: center;">
+              <a href="${SITE_URL}/blog" class="cta">See what's trending →</a>
+            </div>
+            <p style="margin-top: 36px; font-size: 14px; color: #6B7280;">You are in control. Unsubscribe anytime with one click.</p>
+          </div>
+          <div class="footer">
+            <p><strong>Zenx Blog</strong> · Hot Topics. Viral Stories. Smart Insights.</p>
+            <p><a href="${SITE_URL}">Visit website</a> · <a href="${unsubscribeUrl}">Unsubscribe</a></p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const text = `
+Welcome to the Zenx newsletter!
+
+You're now part of our inner circle. Expect:
+- AI-curated trending topics before they go viral
+- Instant alerts when new must-read posts drop
+- Exclusive insights, hacks, and deep dives
+
+Start exploring: ${SITE_URL}/blog
+
+Unsubscribe anytime: ${unsubscribeUrl}
+  `
+
+  return sendEmail({ to: subscriberEmail, subject, html, text })
+}
+
+/**
  * Weekly digest email
  */
 export async function sendWeeklyDigest(

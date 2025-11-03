@@ -3,115 +3,82 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarIcon, ClockIcon, EyeIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import '@/styles/enhanced-blog.css'
 import { headers } from 'next/headers'
 import { load } from 'cheerio'
+import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 
 import { supabase } from '@/lib/supabase'
 import TableOfContents, { type TocHeading } from '@/components/TableOfContents'
 import ReadingProgress from '@/components/ReadingProgress'
-import type { Database } from '@/types/database.types'
+import NewsletterSubscribe from '@/components/NewsletterSubscribe'
+import AdSlot from '@/components/AdSlot'
+import SavePostButton from '@/components/SavePostButton'
+import PostViewCounter from '@/components/PostViewCounter'
+import ReadingHistoryTracker from '@/components/ReadingHistoryTracker'
+import InlineAd from '@/components/InlineAd'
+import InlineAdInjector from '@/components/InlineAdInjector'
 
-type BlogPostRow = Database['public']['Tables']['blog_posts']['Row']
+const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? ''
+const ARTICLE_TOP_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_TOP_SLOT ?? ''
+const ARTICLE_MID_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_MID_SLOT ?? ''
+const ARTICLE_FOOTER_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_FOOTER_SLOT ?? ''
+const ARTICLE_SIDEBAR_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SIDEBAR_SLOT ?? ''
+const ARTICLE_INLINE_AD_SLOT_PRIMARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_PRIMARY_SLOT ?? ''
+const ARTICLE_INLINE_AD_SLOT_SECONDARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_SECONDARY_SLOT ?? ''
 
-interface BlogPost extends BlogPostRow {
-  views: number
+type BlogPost = {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  read_time: number | null
+  published_at: string | null
+  featured_image: string | null
+  tags: string[] | null
+  seo_title: string | null
+  seo_description: string | null
+  views: number | null
 }
 
-type RelatedPost = Pick<
-  BlogPostRow,
-  'id' | 'title' | 'slug' | 'excerpt' | 'featured_image' | 'category' | 'read_time' | 'published_at'
->
+type RelatedPost = {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  featured_image: string | null
+  category: string
+  read_time: number | null
+  published_at: string | null
+}
 
-type Heading = TocHeading;
+type ProcessedHtmlResult = {
+  html: string
+  headings: TocHeading[]
+}
 
-function slugifyHeading(input: string) {
-  const text = input
+const HEADING_TAGS = ['h1', 'h2', 'h3']
+
+function slugifyHeading(text: string): string {
+  return text
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-
-  return text || 'section'
+    .replace(/^-|-$/g, '') || 'section'
 }
 
-function normaliseHeadings(headings: Heading[]): Heading[] {
-  const seen = new Map<string, number>()
-
-  return headings.map((heading) => {
-    const baseId = heading.id
-    const count = seen.get(baseId) ?? 0
-    seen.set(baseId, count + 1)
-
-    if (count === 0) {
-      return heading
-    }
-
-    return {
-      ...heading,
-      id: `${baseId}-${count}`
-    }
-  })
-}
-
-function processHtmlContent(rawHtml: string): { html: string; headings: Heading[] } {
-  const wrapped = `<div id="zenx-article-root">${rawHtml}</div>`
-  const $ = load(wrapped, { decodeEntities: false })
-  const headings: Heading[] = []
-
-  $('#zenx-article-root')
-    .find('h2, h3')
-    .each((index, element) => {
-      const tagName = 'tagName' in element ? element.tagName?.toLowerCase() : undefined
-      if (!tagName) return
-
-      const level = Number(tagName.replace('h', ''))
-      if (level !== 2 && level !== 3) return
-
-      const text = $(element).text().trim()
-      let slug = slugifyHeading(text)
-      if (!slug || slug === 'section') {
-        slug = `section-${index + 1}`
-      }
-
-      headings.push({ id: slug, text, level })
-      $(element).attr('id', slug)
-    })
-
-  const uniqueHeadings = normaliseHeadings(headings)
-  uniqueHeadings.forEach(({ id }, idx) => {
-    $('#zenx-article-root')
-      .find('h2, h3')
-      .eq(idx)
-      .attr('id', id)
-  })
-
-  const processedHtml = $('#zenx-article-root').html() ?? rawHtml
-  return { html: processedHtml, headings: uniqueHeadings }
-}
-
-function extractMarkdownHeadings(markdown: string): Heading[] {
-  const headings: Heading[] = []
-  const lines = markdown.split('\n')
-
-  lines.forEach((line) => {
-    const match = line.match(/^(#{2,3})\s+(.*)$/)
-    if (!match) return
-
-    const level = match[1].length
-    const text = match[2].trim()
-    if (!text) return
-
-    const slug = slugifyHeading(text)
-    headings.push({ id: slug, text, level })
-  })
-
-  return normaliseHeadings(headings)
+function getUniqueId(base: string, seen: Map<string, number>): string {
+  const count = seen.get(base) ?? 0
+  seen.set(base, count + 1)
+  return count === 0 ? base : `${base}-${count + 1}`
 }
 
 function extractTextFromChildren(children: ReactNode): string {
@@ -119,12 +86,12 @@ function extractTextFromChildren(children: ReactNode): string {
     return children
   }
 
-  if (Array.isArray(children)) {
-    return children.map(extractTextFromChildren).join(' ')
-  }
-
   if (typeof children === 'number') {
     return children.toString()
+  }
+
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join(' ')
   }
 
   if (children && typeof children === 'object' && 'props' in children) {
@@ -133,6 +100,91 @@ function extractTextFromChildren(children: ReactNode): string {
   }
 
   return ''
+}
+
+function extractMarkdownHeadings(markdown: string): TocHeading[] {
+  const lines = markdown.split(/\r?\n/)
+  const seen = new Map<string, number>()
+  const headings: TocHeading[] = []
+
+  lines.forEach((line) => {
+    const match = /^(#{1,3})\s+(.*)/.exec(line.trim())
+    if (!match) return
+
+    const level = match[1].length
+    const text = match[2].trim()
+    if (!text) return
+
+    const base = slugifyHeading(text)
+    const id = getUniqueId(base, seen)
+
+    headings.push({
+      id,
+      text,
+      level
+    })
+  })
+
+  return headings
+}
+
+function processHtmlContent(html: string): ProcessedHtmlResult {
+  const $ = load(html, { decodeEntities: false })
+  $('script, style, iframe, noscript').remove()
+  $('[data-inline-ad]').remove()
+
+  const seen = new Map<string, number>()
+  const headings: TocHeading[] = []
+
+  $('h1, h2, h3').each((_, element) => {
+    const node = element as { tagName?: string; name?: string }
+    const rawTagName = typeof node.tagName === 'string' ? node.tagName : node.name
+    const tagName = rawTagName?.toLowerCase()
+    if (!tagName || !HEADING_TAGS.includes(tagName)) {
+      return
+    }
+
+    const level = Number(tagName.replace('h', ''))
+    const text = $(element).text().trim()
+    if (!text) {
+      return
+    }
+
+    const base = slugifyHeading(text)
+    const id = getUniqueId(base, seen)
+
+    $(element).attr('id', id)
+    headings.push({ id, text, level })
+  })
+
+  return {
+    html: $.root().html() ?? html,
+    headings
+  }
+}
+
+function injectInlineAdsIntoHtml(html: string): string {
+  const $ = load(html, { decodeEntities: false })
+  $('[data-inline-ad]').remove()
+
+  const paragraphs = $('p')
+  if (paragraphs.length === 0) {
+    return $.root().html() ?? html
+  }
+
+  const targets: Array<{ index: number; slot: 'primary' | 'secondary' }> = [
+    { index: 1, slot: 'primary' },
+    { index: 4, slot: 'secondary' }
+  ]
+
+  targets.forEach(({ index, slot }) => {
+    const paragraph = paragraphs.eq(index)
+    if (paragraph.length) {
+      paragraph.after(`<div class="inline-ad" data-inline-ad="true" data-slot="${slot}"></div>`)
+    }
+  })
+
+  return $.root().html() ?? html
 }
 
 async function getBlogPost(slug: string): Promise<{ post: BlogPost; relatedPosts: RelatedPost[] } | null> {
@@ -254,7 +306,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   const articleDomId = 'zenx-article-content'
   const isHtmlContent = /<([a-z][\w0-9]*)\b[^>]*>/i.test(post.content || '')
   const processedResult = isHtmlContent ? processHtmlContent(post.content) : null
-  const processedHtml = processedResult?.html ?? post.content
+  const htmlWithInlineAds = processedResult ? injectInlineAdsIntoHtml(processedResult.html) : null
+  const processedHtml = htmlWithInlineAds ?? processedResult?.html ?? post.content
   const headings = isHtmlContent
     ? processedResult?.headings ?? []
     : extractMarkdownHeadings(post.content)
@@ -291,10 +344,157 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   }
 
   const shareUrl = `${baseUrl}/blog/${post.slug}`
+  let markdownParagraphCount = 0
+
+  const mergeClassName = (base: string, extra?: string) => [base, extra].filter(Boolean).join(' ')
+
+  const markdownComponents: Components = {
+    h1: ({ children, className, ...props }) => {
+      const text = extractTextFromChildren(children ?? '')
+      const id = getMarkdownHeadingId(1, text)
+      return (
+        <h1
+          {...props}
+          id={id}
+          className={mergeClassName('text-3xl font-bold text-slate-900', className)}
+        >
+          {children}
+        </h1>
+      )
+    },
+    h2: ({ children, className, ...props }) => {
+      const text = extractTextFromChildren(children ?? '')
+      const id = getMarkdownHeadingId(2, text)
+      return (
+        <h2
+          {...props}
+          id={id}
+          className={mergeClassName('mt-12 text-2xl font-bold text-slate-900', className)}
+        >
+          {children}
+        </h2>
+      )
+    },
+    h3: ({ children, className, ...props }) => {
+      const text = extractTextFromChildren(children ?? '')
+      const id = getMarkdownHeadingId(3, text)
+      return (
+        <h3
+          {...props}
+          id={id}
+          className={mergeClassName('mt-8 text-xl font-semibold text-slate-900', className)}
+        >
+          {children}
+        </h3>
+      )
+    },
+    p: ({ children, className, ...props }) => {
+      markdownParagraphCount += 1
+
+      const paragraph = (
+        <p {...props} className={mergeClassName('leading-relaxed text-slate-700', className)}>
+          {children}
+        </p>
+      )
+
+      const inlineAds: Array<{ key: string; slot: string; label: string }> = []
+
+      if (markdownParagraphCount === 2) {
+        inlineAds.push({
+          key: 'markdown-inline-primary',
+          slot: ARTICLE_INLINE_AD_SLOT_PRIMARY,
+          label: 'Sponsored Read'
+        })
+      }
+
+      if (markdownParagraphCount === 5) {
+        inlineAds.push({
+          key: 'markdown-inline-secondary',
+          slot: ARTICLE_INLINE_AD_SLOT_SECONDARY,
+          label: 'Recommended Partner'
+        })
+      }
+
+      if (inlineAds.length === 0) {
+        return paragraph
+      }
+
+      return (
+        <Fragment>
+          {paragraph}
+          {inlineAds.map(({ key, slot, label }) => (
+            <InlineAd
+              key={key}
+              slotId={slot}
+              clientId={ADSENSE_CLIENT_ID}
+              format="fluid"
+              label={label}
+              className="max-w-3xl"
+            />
+          ))}
+        </Fragment>
+      )
+    },
+    ul: ({ children, className, ...props }) => (
+      <ul {...props} className={mergeClassName('my-6 list-disc pl-6 text-slate-700', className)}>
+        {children}
+      </ul>
+    ),
+    ol: ({ children, className, ...props }) => (
+      <ol {...props} className={mergeClassName('my-6 list-decimal pl-6 text-slate-700', className)}>
+        {children}
+      </ol>
+    ),
+    blockquote: ({ children, className, ...props }) => (
+      <blockquote
+        {...props}
+        className={mergeClassName('my-6 border-l-4 border-blue-500 bg-blue-50/60 px-6 py-4 text-slate-700', className)}
+      >
+        {children}
+      </blockquote>
+    ),
+    code: ({ children, className, ...props }) => (
+      <code
+        {...props}
+        className={mergeClassName('rounded bg-slate-900/90 px-2 py-1 font-mono text-sm text-slate-100', className)}
+      >
+        {children}
+      </code>
+    ),
+    pre: ({ children, className, ...props }) => (
+      <pre
+        {...props}
+        className={mergeClassName('my-6 overflow-x-auto rounded-2xl bg-slate-900/95 p-5 text-sm text-slate-50', className)}
+      >
+        {children}
+      </pre>
+    ),
+    table: ({ children, className, ...props }) => (
+      <div className={mergeClassName('my-8 overflow-hidden rounded-2xl border border-slate-200 shadow-sm', className)}>
+        <table {...props} className="w-full text-left text-sm text-slate-700">
+          {children}
+        </table>
+      </div>
+    ),
+    th: ({ children, className, ...props }) => (
+      <th
+        {...props}
+        className={mergeClassName('bg-slate-900/90 px-4 py-3 text-sm font-semibold text-white', className)}
+      >
+        {children}
+      </th>
+    ),
+    td: ({ children, className, ...props }) => (
+      <td {...props} className={mergeClassName('px-4 py-3 text-sm text-slate-700', className)}>
+        {children}
+      </td>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
       <ReadingProgress targetId={articleDomId} />
+      <ReadingHistoryTracker postId={post.id} articleElementId={articleDomId} />
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <nav className="mb-8 flex text-sm text-gray-600">
           <Link href="/" className="hover:text-blue-600">
@@ -324,7 +524,12 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
               </span>
               <span className="inline-flex items-center">
                 <EyeIcon className="mr-1.5 h-4 w-4" />
-                {post.views.toLocaleString()} views
+                <PostViewCounter
+                  postId={post.id}
+                  slug={post.slug}
+                  initialViews={post.views ?? 0}
+                  className="ml-0.5"
+                />
               </span>
             </div>
           </div>
@@ -369,6 +574,22 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             >
               WhatsApp
             </a>
+            <SavePostButton
+              postId={post.id}
+              postSlug={post.slug}
+              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
+            />
+          </div>
+
+          <div className="mt-6">
+            <AdSlot
+              slotId={ARTICLE_TOP_AD_SLOT}
+              format="auto"
+              variant="minimal"
+              className="mx-auto max-w-4xl"
+              slotStyle={{ display: 'block', minHeight: 90 }}
+              title="Sponsored Spotlight"
+            />
           </div>
         </header>
 
@@ -387,82 +608,68 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
         <div className="grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
           <div className="space-y-10">
-            <div className="rounded-3xl bg-slate-50 p-6 text-center text-slate-500 shadow-inner">
-              <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white">
-                Advertisement Space
-              </div>
-            </div>
+            <AdSlot
+              slotId={ARTICLE_MID_AD_SLOT}
+              format="fluid"
+              layout="in-article"
+              variant="bare"
+              showLabel={false}
+              className="text-center"
+              slotStyle={{ display: 'block', margin: '16px auto' }}
+            />
 
             <article id={articleDomId} className="prose prose-lg mx-auto max-w-none text-slate-800 prose-headings:text-slate-900 prose-a:text-blue-600">
               {isHtmlContent ? (
-                <div
-                  className="enhanced-blog-content"
-                  dangerouslySetInnerHTML={{ __html: processedHtml }}
-                />
+                <Fragment>
+                  <div
+                    className="enhanced-blog-content"
+                    dangerouslySetInnerHTML={{ __html: processedHtml }}
+                  />
+                  <InlineAdInjector
+                    articleElementId={articleDomId}
+                    clientId={ADSENSE_CLIENT_ID}
+                    primarySlot={ARTICLE_INLINE_AD_SLOT_PRIMARY}
+                    secondarySlot={ARTICLE_INLINE_AD_SLOT_SECONDARY}
+                  />
+                </Fragment>
               ) : (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
-                  components={{
-                    h1: ({ children }) => (
-                      <h1 id={getMarkdownHeadingId(1, extractTextFromChildren(children))} className="text-3xl font-bold text-slate-900">
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children }) => {
-                      const text = extractTextFromChildren(children)
-                      const id = getMarkdownHeadingId(2, text)
-                      return (
-                        <h2 id={id} className="mt-12 text-2xl font-bold text-slate-900">
-                          {children}
-                        </h2>
-                      )
-                    },
-                    h3: ({ children }) => {
-                      const text = extractTextFromChildren(children)
-                      const id = getMarkdownHeadingId(3, text)
-                      return (
-                        <h3 id={id} className="mt-8 text-xl font-semibold text-slate-900">
-                          {children}
-                        </h3>
-                      )
-                    },
-                    p: ({ children }) => <p className="leading-relaxed text-slate-700">{children}</p>,
-                    ul: ({ children }) => <ul className="my-6 list-disc pl-6 text-slate-700">{children}</ul>,
-                    ol: ({ children }) => <ol className="my-6 list-decimal pl-6 text-slate-700">{children}</ol>,
-                    blockquote: ({ children }) => (
-                      <blockquote className="my-6 border-l-4 border-blue-500 bg-blue-50/60 px-6 py-4 text-slate-700">
-                        {children}
-                      </blockquote>
-                    ),
-                    code: ({ children }) => (
-                      <code className="rounded bg-slate-900/90 px-2 py-1 font-mono text-sm text-slate-100">
-                        {children}
-                      </code>
-                    ),
-                    pre: ({ children }) => (
-                      <pre className="my-6 overflow-x-auto rounded-2xl bg-slate-900/95 p-5 text-sm text-slate-50">
-                        {children}
-                      </pre>
-                    ),
-                    table: ({ children }) => (
-                      <div className="my-8 overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-                        <table className="w-full text-left text-sm text-slate-700">{children}</table>
-                      </div>
-                    ),
-                    th: ({ children }) => <th className="bg-slate-900/90 px-4 py-3 text-sm font-semibold text-white">{children}</th>,
-                    td: ({ children }) => <td className="px-4 py-3 text-sm text-slate-700">{children}</td>
-                  }}
+                  components={markdownComponents}
                 >
                   {post.content}
                 </ReactMarkdown>
               )}
             </article>
 
-            <div className="rounded-3xl bg-slate-50 p-6 text-center text-slate-500 shadow-inner">
-              <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white">
-                Advertisement Space
-              </div>
+            <AdSlot
+              slotId={ARTICLE_MID_AD_SLOT}
+              format="fluid"
+              layout="in-article"
+              variant="bare"
+              showLabel={false}
+              className="text-center"
+              slotStyle={{ display: 'block', margin: '16px auto' }}
+            />
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <AdSlot
+                slotId={ARTICLE_INLINE_AD_SLOT_PRIMARY}
+                format="auto"
+                variant="panel"
+                className="mx-auto w-full"
+                slotStyle={{ minHeight: 250 }}
+                title="Sponsored Insight"
+              />
+              <AdSlot
+                slotId={ARTICLE_INLINE_AD_SLOT_SECONDARY}
+                format="auto"
+                variant="panel"
+                className="mx-auto w-full"
+                slotStyle={{ minHeight: 250 }}
+                title="Partner Spotlight"
+              />
             </div>
 
             {postTags.length > 0 && (
@@ -517,35 +724,44 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
               </section>
             )}
 
-            <div className="rounded-3xl bg-slate-50 p-6 text-center text-slate-500 shadow-inner">
-              <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white">
-                Advertisement Space
-              </div>
-            </div>
+            <AdSlot
+              slotId={ARTICLE_FOOTER_AD_SLOT}
+              format="fluid"
+              layout="in-article"
+              variant="bare"
+              showLabel={false}
+              className="text-center"
+              slotStyle={{ display: 'block', margin: '16px auto' }}
+            />
           </div>
 
           <aside className="space-y-8">
             <TableOfContents headings={headings} />
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">Stay in the loop</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Subscribe to get the hottest trends and AI-crafted breakdowns delivered weekly.
-              </p>
-              <form className="mt-4 space-y-3">
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="you@example.com"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </div>
+            <NewsletterSubscribe />
+            <AdSlot
+              slotId={ARTICLE_SIDEBAR_AD_SLOT}
+              format="autorelaxed"
+              variant="minimal"
+              title="Featured Stories"
+              className="bg-white"
+              slotStyle={{ display: 'block' }}
+            />
+            <AdSlot
+              slotId={ARTICLE_SIDEBAR_AD_SLOT}
+              format="autorelaxed"
+              variant="minimal"
+              title="More Stories"
+              className="bg-white"
+              slotStyle={{ display: 'block' }}
+            />
+            <AdSlot
+              slotId={ARTICLE_SIDEBAR_AD_SLOT}
+              format="autorelaxed"
+              variant="minimal"
+              title="Trending Now"
+              className="bg-white"
+              slotStyle={{ display: 'block' }}
+            />
           </aside>
         </div>
       </div>

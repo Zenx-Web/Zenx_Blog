@@ -70,29 +70,37 @@ export function useReadingHistory() {
     fetchHistory()
   }, [user, fetchHistory])
 
-  const trackReading = async (postId: string, progress: number, readTimeSeconds: number) => {
+  const trackReading = useCallback(async (postId: string, progress: number, readTimeSeconds: number) => {
     if (!user) return
 
+    const existingEntry = history.find((entry) => entry.post_id === postId)
+    const existingProgress = existingEntry?.progress ?? null
+    const maxProgress = Math.max(existingProgress ?? 0, progress)
+    const existingReadTime = existingEntry?.read_time_seconds ?? null
+    const maxReadTime = Math.max(existingReadTime ?? 0, readTimeSeconds)
+
     try {
+      const payload = {
+        user_id: user.id,
+        post_id: postId,
+        progress: maxProgress,
+        completed: maxProgress >= 90,
+        read_time_seconds: maxReadTime,
+        last_read_at: new Date().toISOString(),
+      }
+
       const { error } = await supabase
         .from('user_reading_history')
-        .upsert({
-          user_id: user.id,
-          post_id: postId,
-          progress,
-          completed: progress >= 90,
-          read_time_seconds: readTimeSeconds,
-          last_read_at: new Date().toISOString(),
-        })
+        .upsert(payload, { onConflict: 'user_id,post_id' })
 
       if (error) throw error
       await fetchHistory()
     } catch (err) {
       console.error('Failed to track reading:', err)
     }
-  }
+  }, [user, history, fetchHistory])
 
-  const clearHistory = async () => {
+  const clearHistory = useCallback(async () => {
     if (!user) return
 
     try {
@@ -106,7 +114,7 @@ export function useReadingHistory() {
     } catch (err) {
       console.error('Failed to clear history:', err)
     }
-  }
+  }, [user])
 
   return {
     history,

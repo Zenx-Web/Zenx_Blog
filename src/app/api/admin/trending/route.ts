@@ -17,7 +17,8 @@ export async function GET() {
       setTimeout(() => reject(new Error('API timeout')), 10000) // 10 second timeout
     })
 
-    let trendingTopics: TrendingTopic[] = []
+  let trendingTopics: TrendingTopic[] = []
+  let usedFallback = false
 
     try {
       // Race between API calls and timeout
@@ -39,6 +40,7 @@ export async function GET() {
     if (trendingTopics.length === 0) {
       console.log('No external topics found, using fallback topics')
       trendingTopics = getFallbackTopics()
+      usedFallback = true
     }
     
     // Score topics for blog potential
@@ -72,8 +74,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       topics: scoredTopics.slice(0, 30),
-      message: trendingTopics.length === getFallbackTopics().length ? 'Using fallback topics - external APIs unavailable' : 'Live topics fetched successfully',
-      source: trendingTopics.length === getFallbackTopics().length ? 'fallback' : 'live'
+      message: usedFallback ? 'Using fallback topics - external APIs unavailable' : 'Live topics fetched successfully',
+      source: usedFallback ? 'fallback' : 'live'
     })
   } catch (error) {
     console.error('Critical error in trending topics API:', error)
