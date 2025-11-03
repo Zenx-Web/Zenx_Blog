@@ -7,6 +7,256 @@ export interface TrendingTopic {
   relevanceScore: number
   category?: string
   url?: string
+  searchQuery?: string
+}
+
+// NEW: Search for topics based on a specific query
+export async function searchTopicsByQuery(query: string, limit: number = 20): Promise<TrendingTopic[]> {
+  console.log(`🔍 Searching for "${query}" across multiple sources...`)
+  
+  const timeoutDuration = 5000 // 5 seconds per source
+  
+  const fetchWithTimeout = async <T>(fetchFunction: () => Promise<T>): Promise<T> => {
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('Source timeout')), timeoutDuration)
+    })
+    
+    return Promise.race([fetchFunction(), timeoutPromise])
+  }
+  
+  // Search across multiple sources in parallel
+  const [redditResults, newsResults, googleResults] = await Promise.allSettled([
+    fetchWithTimeout(() => searchReddit(query)),
+    fetchWithTimeout(() => searchNews(query)),
+    fetchWithTimeout(() => searchGoogleTrends(query))
+  ])
+  
+  const allResults: TrendingTopic[] = []
+  
+  if (redditResults.status === 'fulfilled') {
+    allResults.push(...redditResults.value)
+    console.log(`✓ Reddit search: ${redditResults.value.length} results`)
+  } else {
+    console.log(`✗ Reddit search failed: ${redditResults.reason}`)
+  }
+  
+  if (newsResults.status === 'fulfilled') {
+    allResults.push(...newsResults.value)
+    console.log(`✓ News search: ${newsResults.value.length} results`)
+  } else {
+    console.log(`✗ News search failed: ${newsResults.reason}`)
+  }
+  
+  if (googleResults.status === 'fulfilled') {
+    allResults.push(...googleResults.value)
+    console.log(`✓ Google search: ${googleResults.value.length} results`)
+  } else {
+    console.log(`✗ Google search failed: ${googleResults.reason}`)
+  }
+  
+  // Remove duplicates and sort by relevance
+  const uniqueResults = allResults.filter((result, index, self) => 
+    index === self.findIndex((r) => 
+      r.topic.toLowerCase().trim() === result.topic.toLowerCase().trim()
+    )
+  )
+  
+  console.log(`Total unique results: ${uniqueResults.length}`)
+  
+  return uniqueResults
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .slice(0, limit)
+}
+
+// Search Reddit for specific query
+async function searchReddit(query: string): Promise<TrendingTopic[]> {
+  try {
+    console.log(`Searching Reddit for "${query}"...`)
+    
+    // Search across relevant subreddits
+    const response = await axios.get(`https://www.reddit.com/search.json`, {
+      params: {
+        q: query,
+        sort: 'hot',
+        limit: 25,
+        t: 'day' // Last day
+      },
+      timeout: 4000,
+      headers: {
+        'User-Agent': 'ZenxBlog/1.0 (Web Scraper for trending topics)'
+      }
+    })
+    
+    const posts: Array<{ data: { title: string; score: number; subreddit: string; permalink: string; num_comments: number } }> = 
+      response.data.data.children
+    
+    return posts
+      .filter(({ data }) => data.title && data.title.length > 15)
+      .map(({ data }) => ({
+        topic: cleanTopicTitle(data.title),
+        source: `Reddit r/${data.subreddit}`,
+        relevanceScore: calculateRelevanceScore(data.score, data.num_comments),
+        category: getCategoryFromSubreddit(data.subreddit),
+        url: `https://reddit.com${data.permalink}`,
+        searchQuery: query
+      }))
+  } catch (error) {
+    console.warn('Reddit search failed:', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
+}
+
+// Search news sources for specific query
+async function searchNews(query: string): Promise<TrendingTopic[]> {
+  try {
+    console.log(`Searching news for "${query}"...`)
+    
+    // Try NewsAPI first if available
+    if (process.env.NEWS_API_KEY) {
+      const response = await axios.get('https://newsapi.org/v2/everything', {
+        params: {
+          q: query,
+          sortBy: 'popularity',
+          pageSize: 20,
+          language: 'en',
+          apiKey: process.env.NEWS_API_KEY
+        },
+        timeout: 4000
+      })
+      
+      const articles: Array<{ title: string; url: string; source: { name: string }; publishedAt: string }> = 
+        response.data.articles
+      
+      return articles.map((article, index) => ({
+        topic: cleanTopicTitle(article.title),
+        source: article.source.name || 'News',
+        relevanceScore: 1500 - (index * 50), // Decreasing score by position
+        category: getCategoryFromNews(article.title),
+        url: article.url,
+        searchQuery: query
+      }))
+    }
+    
+    // Fallback to Google News RSS
+    return await searchGoogleNews(query)
+  } catch (error) {
+    console.warn('News search failed:', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
+}
+
+// Search Google News RSS
+async function searchGoogleNews(query: string): Promise<TrendingTopic[]> {
+  try {
+    console.log(`Searching Google News for "${query}"...`)
+    
+    const encodedQuery = encodeURIComponent(query)
+    const response = await axios.get(
+      `https://news.google.com/rss/search?q=${encodedQuery}&hl=en-US&gl=US&ceid=US:en`,
+      {
+        timeout: 4000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }
+    )
+    
+    const $ = cheerio.load(response.data, { xmlMode: true })
+    const topics: TrendingTopic[] = []
+    
+    $('item').each((index, element) => {
+      const title = $(element).find('title').text()
+      const link = $(element).find('link').text()
+      const source = $(element).find('source').text() || 'Google News'
+      
+      if (title && title.length > 15) {
+        topics.push({
+          topic: cleanTopicTitle(title),
+          source: source,
+          relevanceScore: 1200 - (index * 30),
+          category: getCategoryFromNews(title),
+          url: link,
+          searchQuery: query
+        })
+      }
+    })
+    
+    return topics.slice(0, 15)
+  } catch (error) {
+    console.warn('Google News search failed:', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
+}
+
+// Search Google Trends for related queries
+async function searchGoogleTrends(query: string): Promise<TrendingTopic[]> {
+  try {
+    console.log(`Searching Google Trends for "${query}"...`)
+    
+    // Get current trending searches that might be related
+    const response = await axios.get('https://trends.google.com/trends/trendingsearches/daily/rss?geo=US', {
+      timeout: 4000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    })
+    
+    const $ = cheerio.load(response.data, { xmlMode: true })
+    const topics: TrendingTopic[] = []
+    
+    const queryLower = query.toLowerCase()
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2)
+    
+    $('item').each((_, element) => {
+      const title = $(element).find('title').text()
+      const traffic = $(element).find('ht\\:approx_traffic').text()
+      const link = $(element).find('link').text()
+      
+      if (title && title !== 'Trending searches') {
+        const titleLower = title.toLowerCase()
+        
+        // Check if the trend is related to the query
+        const isRelated = queryWords.some(word => titleLower.includes(word)) || 
+                          titleLower.includes(queryLower)
+        
+        if (isRelated) {
+          topics.push({
+            topic: cleanTopicTitle(title),
+            source: 'Google Trends',
+            relevanceScore: parseInt(traffic?.replace(/[,+]/g, '') || '2000'),
+            category: getCategoryFromNews(title),
+            url: link,
+            searchQuery: query
+          })
+        }
+      }
+    })
+    
+    return topics
+  } catch (error) {
+    console.warn('Google Trends search failed:', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
+}
+
+// Clean topic titles
+function cleanTopicTitle(title: string): string {
+  // Remove source tags like "- CNN", "| Reuters", etc.
+  let cleaned = title.replace(/\s*[-|]\s*[A-Z]{2,}\s*$/, '')
+  
+  // Remove extra whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim()
+  
+  // Remove trailing ellipsis or dashes
+  cleaned = cleaned.replace(/[.\-…]+$/, '')
+  
+  return cleaned
+}
+
+// Calculate relevance score based on engagement
+function calculateRelevanceScore(upvotes: number, comments: number): number {
+  // Reddit algorithm: upvotes are worth more than comments
+  return Math.round((upvotes * 1.5) + (comments * 0.5))
 }
 
 // Fetch trending topics from Google Trends (using web scraping)

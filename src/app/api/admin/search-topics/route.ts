@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { ensureAdminApiAccess } from '@/lib/auth'
+import { searchTopicsByQuery } from '@/lib/trending'
 
 export async function POST(request: Request) {
   try {
@@ -17,16 +18,29 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log(`Searching for custom topics: "${query}"`)
+    console.log(`🔍 Searching for trending topics related to: "${query}"`)
 
-    // Generate topic ideas based on the search query
-    const searchResults = await generateTopicIdeas(query, limit)
+    // Search for real trending topics based on the query
+    const searchResults = await searchTopicsByQuery(query, limit)
+    
+    if (searchResults.length === 0) {
+      // Fallback to generated ideas if no real results found
+      const fallbackResults = await generateTopicIdeas(query, limit)
+      return NextResponse.json({
+        success: true,
+        topics: fallbackResults,
+        query: query,
+        message: `Generated ${fallbackResults.length} topic ideas for "${query}" (no live results found)`,
+        source: 'generated'
+      })
+    }
     
     return NextResponse.json({
       success: true,
       topics: searchResults,
       query: query,
-      message: `Found ${searchResults.length} topic ideas for "${query}"`
+      message: `Found ${searchResults.length} trending topics for "${query}"`,
+      source: 'live'
     })
   } catch (error) {
     console.error('Error in custom topic search:', error)

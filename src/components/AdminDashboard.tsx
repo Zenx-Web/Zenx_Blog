@@ -636,19 +636,24 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       
       const data = await response.json()
       
-      if (data.success && data.topics) {
-        // Add custom searched topics to the existing list
-  const newTopics = data.topics.map((topic: TrendingTopic) => ({
+      if (data.success && data.topics && data.topics.length > 0) {
+        // Add custom searched topics to the existing list with proper scoring
+        const newTopics = data.topics.map((topic: TrendingTopic) => ({
           ...topic,
-          source: `Custom Search: ${customSearchQuery}`,
-          blogScore: scoreTopicForBlog(topic)
+          blogScore: scoreTopicForBlog(topic),
+          searchQuery: customSearchQuery
         }))
         
         setTrendingTopics(prev => [...newTopics, ...prev])
         setCustomSearchQuery('')
-        showNotification('success', `Found ${newTopics.length} new topics for "${customSearchQuery}"`)
+        
+        if (data.source === 'live') {
+          showNotification('success', `✅ Found ${newTopics.length} live trending topics for "${customSearchQuery}"!`)
+        } else {
+          showNotification('info', `💡 Generated ${newTopics.length} topic ideas for "${customSearchQuery}" (no live results available)`)
+        }
       } else {
-        showNotification('info', 'No topics found for your search query. Try different keywords.')
+        showNotification('warning', `No results found for "${customSearchQuery}". Try different keywords or check your spelling.`)
       }
     } catch (error) {
       console.error('Error searching custom topics:', error)
@@ -1916,16 +1921,16 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
 
             {/* Custom Topic Search */}
             <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200">
-              <h3 className="font-medium text-gray-900 mb-3">🚀 Search New Topics</h3>
+              <h3 className="font-medium text-gray-900 mb-3">🚀 Search Live Trending Topics</h3>
               <p className="text-sm text-gray-600 mb-3">
-                Enter any keyword or topic to generate fresh blog ideas instantly!
+                Search Reddit, Google News, and other sources for <strong>real trending topics</strong> based on your keywords. Get actual news articles, discussions, and viral content!
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={customSearchQuery}
                   onChange={(e) => setCustomSearchQuery(e.target.value)}
-                  placeholder="e.g., AI trends, crypto news, healthy recipes..."
+                  placeholder="e.g., gaming updates, tech news, crypto trends..."
                   className="flex-1 p-3 border border-purple-300 rounded-lg bg-white text-gray-900 font-medium focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   onKeyPress={(e) => e.key === 'Enter' && searchCustomTopics()}
                 />
@@ -1937,12 +1942,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   {isSearchingCustom && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   )}
-                  {isSearchingCustom ? 'Searching...' : '🔍 Search'}
+                  {isSearchingCustom ? 'Searching...' : '🔍 Search Live'}
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <span className="text-xs text-gray-600">Quick searches:</span>
-                {['AI trends', 'crypto news', 'healthy recipes', 'gaming updates', 'business tips'].map((suggestion) => (
+                <span className="text-xs text-gray-600">Popular searches:</span>
+                {['gaming updates', 'AI news', 'crypto trends', 'tech releases', 'business tips', 'celebrity news'].map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => setCustomSearchQuery(suggestion)}
@@ -1951,6 +1956,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     {suggestion}
                   </button>
                 ))}
+              </div>
+              <div className="mt-3 p-3 bg-white rounded border border-purple-200">
+                <p className="text-xs text-gray-700">
+                  <strong>💡 Pro Tip:</strong> Use specific keywords like &quot;Jubeen Garg&quot;, &quot;iPhone 16 review&quot;, or &quot;PS5 games 2025&quot; 
+                  to find the most relevant trending content. The search scans Reddit posts, Google News articles, and trending searches to find real, current topics!
+                </p>
               </div>
             </div>
 
