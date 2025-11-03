@@ -147,6 +147,22 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [seoOptimized, setSeoOptimized] = useState(true)
   const [customPrompt, setCustomPrompt] = useState('')
   
+  // Blog creation mode toggle
+  const [blogMode, setBlogMode] = useState<'ai' | 'manual'>('ai')
+  
+  // Manual blog writing state
+  const [manualBlogTitle, setManualBlogTitle] = useState('')
+  const [manualBlogContent, setManualBlogContent] = useState('')
+  const [manualBlogExcerpt, setManualBlogExcerpt] = useState('')
+  const [manualBlogCategory, setManualBlogCategory] = useState('technology')
+  const [manualBlogTags, setManualBlogTags] = useState('')
+  const [manualBlogFeaturedImage, setManualBlogFeaturedImage] = useState('')
+  const [manualBlogSeoTitle, setManualBlogSeoTitle] = useState('')
+  const [manualBlogSeoDescription, setManualBlogSeoDescription] = useState('')
+  const [isPublishingManual, setIsPublishingManual] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  
   // Simple search state for existing topics
   const [searchTerm, setSearchTerm] = useState('')
   
@@ -1058,6 +1074,150 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }
   }
 
+  const publishManualBlog = async (publishNow: boolean = false) => {
+    // Validation
+    if (!manualBlogTitle.trim()) {
+      showNotification('warning', 'Please enter a blog title')
+      return
+    }
+    if (!manualBlogContent.trim()) {
+      showNotification('warning', 'Please enter blog content')
+      return
+    }
+    if (!manualBlogExcerpt.trim()) {
+      showNotification('warning', 'Please enter a blog excerpt')
+      return
+    }
+
+    setIsPublishingManual(true)
+
+    try {
+      const slug = slugifyTitle(manualBlogTitle)
+      const tags = manualBlogTags.split(',').map(tag => tag.trim()).filter(Boolean)
+      
+      // Estimate read time (average reading speed: 200 words per minute)
+      const wordCount = manualBlogContent.trim().split(/\s+/).length
+      const readTime = Math.max(1, Math.ceil(wordCount / 200))
+
+      const payload = {
+        title: manualBlogTitle.trim(),
+        slug,
+        content: manualBlogContent.trim(),
+        excerpt: manualBlogExcerpt.trim(),
+        category: manualBlogCategory,
+        tags,
+        is_published: publishNow,
+        published_at: publishNow ? new Date().toISOString() : null,
+        featured_image: manualBlogFeaturedImage.trim() || null,
+        seo_title: manualBlogSeoTitle.trim() || manualBlogTitle.trim(),
+        seo_description: manualBlogSeoDescription.trim() || manualBlogExcerpt.trim(),
+        read_time: readTime,
+        is_featured: false
+      }
+
+      const response = await fetch('/api/admin/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        showNotification('success', publishNow ? 'Blog published successfully!' : 'Blog saved as draft!')
+        
+        // Clear form
+        setManualBlogTitle('')
+        setManualBlogContent('')
+        setManualBlogExcerpt('')
+        setManualBlogTags('')
+        setManualBlogFeaturedImage('')
+        setManualBlogSeoTitle('')
+        setManualBlogSeoDescription('')
+        
+        // Refresh posts list
+        void fetchManagedPosts()
+        
+        // Send notifications if published
+        if (publishNow && data.post?.id) {
+          void notifySubscribers(data.post.id)
+        }
+      } else {
+        showNotification('error', data.error || 'Failed to save blog')
+      }
+    } catch (error) {
+      console.error('Error publishing manual blog:', error)
+      showNotification('error', 'Error saving blog. Please try again.')
+    } finally {
+      setIsPublishingManual(false)
+    }
+  }
+
+  // Handle image upload
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      showNotification('error', 'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      showNotification('error', 'File too large. Maximum size is 5MB.')
+      return
+    }
+
+    setIsUploadingImage(true)
+    setUploadProgress(0)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
+        })
+      }, 100)
+
+      const response = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Upload failed')
+      }
+
+      const data = await response.json()
+      setManualBlogFeaturedImage(data.url)
+      showNotification('success', 'Image uploaded successfully!')
+
+    } catch (error: any) {
+      console.error('Image upload error:', error)
+      showNotification('error', error.message || 'Failed to upload image')
+    } finally {
+      setIsUploadingImage(false)
+      setUploadProgress(0)
+    }
+  }
+
   // Prevent hydration mismatch by not rendering until hydrated
   if (!isHydrated) {
     return (
@@ -1687,6 +1847,46 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           </div>
         </div>
 
+        {/* Blog Creation Mode Toggle */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 mb-8 border-2 border-purple-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">✍️ Blog Creation Mode</h2>
+              <p className="text-sm text-gray-600">Choose how you want to create your blog post</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBlogMode('ai')}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                  blogMode === 'ai'
+                    ? 'bg-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-400'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
+                </svg>
+                AI Generated
+              </button>
+              <button
+                onClick={() => setBlogMode('manual')}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                  blogMode === 'manual'
+                    ? 'bg-blue-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-blue-400'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Write Manually
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Generation Section */}
+        {blogMode === 'ai' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Trending Topics Section */}
           <div className="bg-white rounded-lg shadow p-6">
@@ -2270,6 +2470,270 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
             )}
           </div>
         </div>
+        )}
+
+        {/* Manual Blog Editor Section */}
+        {blogMode === 'manual' && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            <h2 className="text-2xl font-bold text-gray-900">Manual Blog Editor</h2>
+          </div>
+
+          <div className="space-y-6">
+            {/* Blog Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2">
+                Blog Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={manualBlogTitle}
+                onChange={(e) => setManualBlogTitle(e.target.value)}
+                placeholder="Enter an engaging title for your blog post..."
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Blog Excerpt */}
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2">
+                Excerpt / Summary <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={manualBlogExcerpt}
+                onChange={(e) => setManualBlogExcerpt(e.target.value)}
+                placeholder="Write a brief summary (2-3 sentences) that will appear in blog listings..."
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Blog Content */}
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2">
+                Blog Content <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={manualBlogContent}
+                onChange={(e) => setManualBlogContent(e.target.value)}
+                placeholder="Write your blog content here... You can use markdown formatting."
+                rows={20}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="mt-2 text-sm text-gray-600">
+                Word count: {manualBlogContent.trim().split(/\s+/).filter(w => w).length} words
+              </p>
+            </div>
+
+            {/* Category and Tags */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-2">
+                  Category
+                </label>
+                <select
+                  value={manualBlogCategory}
+                  onChange={(e) => setManualBlogCategory(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="Technology">Technology</option>
+                  <option value="Business">Business</option>
+                  <option value="Lifestyle">Lifestyle</option>
+                  <option value="Health">Health</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="Science">Science</option>
+                  <option value="Sports">Sports</option>
+                  <option value="Politics">Politics</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={manualBlogTags}
+                  onChange={(e) => setManualBlogTags(e.target.value)}
+                  placeholder="e.g., AI, Technology, Innovation"
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Featured Image */}
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2">
+                Featured Image
+              </label>
+              
+              <div className="space-y-3">
+                {/* Upload Button */}
+                <div className="flex gap-3">
+                  <label className="flex-1 cursor-pointer">
+                    <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isUploadingImage 
+                        ? 'border-blue-400 bg-blue-50' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                    }`}>
+                      {isUploadingImage ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Uploading... {uploadProgress}%
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                          </div>
+                          <p className="text-xs text-gray-500">PNG, JPG, WebP, GIF up to 5MB</p>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                </div>
+
+                {/* OR Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="text-sm text-gray-500 font-medium">OR</span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                {/* URL Input */}
+                <div>
+                  <input
+                    type="url"
+                    value={manualBlogFeaturedImage}
+                    onChange={(e) => setManualBlogFeaturedImage(e.target.value)}
+                    placeholder="Paste image URL: https://example.com/image.jpg"
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Image Preview */}
+                {manualBlogFeaturedImage && (
+                  <div className="mt-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-start justify-between mb-2">
+                      <p className="text-sm font-medium text-gray-700">Preview:</p>
+                      <button
+                        onClick={() => setManualBlogFeaturedImage('')}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <img 
+                      src={manualBlogFeaturedImage} 
+                      alt="Preview" 
+                      className="w-full max-w-md rounded-lg border border-gray-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SEO Settings */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">🔍 SEO Settings</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-2">
+                    SEO Title (Optional - defaults to blog title)
+                  </label>
+                  <input
+                    type="text"
+                    value={manualBlogSeoTitle}
+                    onChange={(e) => setManualBlogSeoTitle(e.target.value)}
+                    placeholder="SEO-optimized title for search engines..."
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-2">
+                    SEO Description (Optional - defaults to excerpt)
+                  </label>
+                  <textarea
+                    value={manualBlogSeoDescription}
+                    onChange={(e) => setManualBlogSeoDescription(e.target.value)}
+                    placeholder="Meta description for search engines (150-160 characters)..."
+                    rows={3}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-sm text-gray-600">
+                    {manualBlogSeoDescription.length} characters
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+              <button
+                onClick={() => publishManualBlog(false)}
+                disabled={isPublishingManual || !manualBlogTitle.trim() || !manualBlogContent.trim() || !manualBlogExcerpt.trim()}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {isPublishingManual ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span> Save as Draft
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => publishManualBlog(true)}
+                disabled={isPublishingManual || !manualBlogTitle.trim() || !manualBlogContent.trim() || !manualBlogExcerpt.trim()}
+                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {isPublishingManual ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <span>🚀</span> Publish Now
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+        )}
       </div>
     </div>
   )
