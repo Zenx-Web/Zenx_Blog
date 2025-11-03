@@ -90,17 +90,131 @@ function generateBlogTopicsFromQuery(query: string, limit: number) {
 
 // Detect category from search query
 function detectQueryCategory(query: string): string {
-  const techKeywords = ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'automation', 'cloud', 'data', 'gaming', 'game']
-  const businessKeywords = ['business', 'startup', 'investment', 'market', 'finance', 'entrepreneur', 'profit', 'strategy']
-  const lifestyleKeywords = ['health', 'fitness', 'lifestyle', 'wellness', 'food', 'travel', 'fashion', 'home', 'mindfulness']
-  const entertainmentKeywords = ['movie', 'music', 'celebrity', 'tv', 'show', 'entertainment', 'viral', 'social']
-  const sportsKeywords = ['sport', 'football', 'basketball', 'soccer', 'tennis', 'olympics', 'athlete', 'team']
-
-  if (techKeywords.some(keyword => query.includes(keyword))) return 'technology'
-  if (businessKeywords.some(keyword => query.includes(keyword))) return 'business'
-  if (lifestyleKeywords.some(keyword => query.includes(keyword))) return 'lifestyle'
-  if (entertainmentKeywords.some(keyword => query.includes(keyword))) return 'entertainment'
-  if (sportsKeywords.some(keyword => query.includes(keyword))) return 'sports'
+  const lowerQuery = query.toLowerCase()
   
-  return 'world-news' // Default category
+  // Technology keywords - expanded
+  const techKeywords = [
+    'ai', 'artificial intelligence', 'tech', 'technology', 'software', 'app', 'application',
+    'digital', 'cyber', 'robot', 'automation', 'cloud', 'data', 'gaming', 'game', 'video game',
+    'computer', 'laptop', 'smartphone', 'iphone', 'android', 'ios', 'windows', 'mac',
+    'coding', 'programming', 'developer', 'bitcoin', 'crypto', 'blockchain', 'nft',
+    'metaverse', 'vr', 'virtual reality', 'ar', 'augmented reality', 'machine learning',
+    'chatgpt', 'openai', 'google', 'microsoft', 'apple', 'tesla', 'spacex', 'amazon',
+    'facebook', 'meta', 'instagram', 'twitter', 'tiktok', 'youtube', 'netflix',
+    'internet', 'web', 'website', 'online', 'streaming', 'podcast', 'gadget', 'device',
+    'electric vehicle', 'ev', 'drone', '5g', 'wifi', 'cybersecurity', 'hacking', 'privacy'
+  ]
+  
+  // Entertainment keywords - expanded
+  const entertainmentKeywords = [
+    'movie', 'film', 'cinema', 'hollywood', 'bollywood', 'entertainment', 'celebrity',
+    'music', 'concert', 'album', 'song', 'singer', 'artist', 'band', 'musician',
+    'tv', 'television', 'show', 'series', 'netflix', 'disney', 'hbo', 'prime video',
+    'actor', 'actress', 'director', 'producer', 'oscar', 'grammy', 'award',
+    'viral', 'meme', 'funny', 'comedy', 'joke', 'humor', 'trending',
+    'marvel', 'dc', 'superhero', 'anime', 'manga', 'cartoon',
+    'influencer', 'youtuber', 'streamer', 'twitch', 'content creator',
+    'fashion', 'style', 'beauty', 'makeup', 'model', 'runway'
+  ]
+  
+  // Sports keywords - expanded
+  const sportsKeywords = [
+    'sport', 'sports', 'football', 'soccer', 'nfl', 'fifa', 'world cup',
+    'basketball', 'nba', 'baseball', 'mlb', 'cricket', 'ipl', 'tennis',
+    'golf', 'olympics', 'championship', 'tournament', 'league', 'match',
+    'player', 'team', 'coach', 'athlete', 'fitness', 'workout', 'gym',
+    'hockey', 'nhl', 'boxing', 'mma', 'ufc', 'wrestling', 'wwe',
+    'racing', 'formula 1', 'f1', 'nascar', 'motorsport',
+    'rugby', 'volleyball', 'badminton', 'table tennis', 'esports', 'gaming tournament'
+  ]
+  
+  // Business keywords - expanded
+  const businessKeywords = [
+    'business', 'startup', 'entrepreneur', 'investment', 'investor', 'funding',
+    'market', 'stock', 'share', 'trading', 'economy', 'finance', 'financial',
+    'money', 'profit', 'revenue', 'sales', 'marketing', 'advertising',
+    'ceo', 'founder', 'company', 'corporation', 'enterprise', 'industry',
+    'bank', 'banking', 'insurance', 'real estate', 'property',
+    'wall street', 'nasdaq', 'dow jones', 'forex', 'commodity',
+    'tax', 'accounting', 'audit', 'consulting', 'management',
+    'ecommerce', 'retail', 'wholesale', 'supply chain', 'logistics',
+    'venture capital', 'vc', 'ipo', 'merger', 'acquisition', 'strategy'
+  ]
+  
+  // Lifestyle keywords - expanded
+  const lifestyleKeywords = [
+    'health', 'healthy', 'wellness', 'wellbeing', 'fitness', 'exercise',
+    'diet', 'nutrition', 'food', 'recipe', 'cooking', 'chef', 'restaurant',
+    'travel', 'tourism', 'vacation', 'holiday', 'destination', 'hotel',
+    'lifestyle', 'living', 'home', 'interior', 'design', 'decor', 'diy',
+    'sustainable', 'eco-friendly', 'green', 'organic', 'vegan', 'vegetarian',
+    'yoga', 'meditation', 'mindfulness', 'mental health', 'therapy', 'self-care',
+    'parenting', 'family', 'relationship', 'dating', 'wedding', 'marriage',
+    'pet', 'dog', 'cat', 'garden', 'gardening', 'nature', 'outdoor',
+    'wine', 'coffee', 'tea', 'beverage', 'drink'
+  ]
+  
+  // World News keywords - expanded
+  const newsKeywords = [
+    'news', 'breaking', 'update', 'latest', 'current', 'today',
+    'politics', 'political', 'government', 'president', 'minister', 'election',
+    'climate', 'environment', 'global warming', 'weather', 'disaster',
+    'war', 'conflict', 'military', 'defense', 'security', 'terrorism',
+    'law', 'legal', 'court', 'justice', 'crime', 'police',
+    'science', 'research', 'study', 'discovery', 'breakthrough',
+    'education', 'university', 'school', 'student', 'teacher',
+    'covid', 'pandemic', 'virus', 'vaccine', 'health crisis',
+    'international', 'global', 'world', 'country', 'nation'
+  ]
+  
+  // Count matches for each category
+  let techScore = 0
+  let entertainmentScore = 0
+  let sportsScore = 0
+  let businessScore = 0
+  let lifestyleScore = 0
+  let newsScore = 0
+  
+  // Check each keyword and assign scores
+  techKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) techScore++
+  })
+  entertainmentKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) entertainmentScore++
+  })
+  sportsKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) sportsScore++
+  })
+  businessKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) businessScore++
+  })
+  lifestyleKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) lifestyleScore++
+  })
+  newsKeywords.forEach(keyword => {
+    if (lowerQuery.includes(keyword)) newsScore++
+  })
+  
+  // Find the category with highest score
+  const scores = {
+    'technology': techScore,
+    'entertainment': entertainmentScore,
+    'sports': sportsScore,
+    'business': businessScore,
+    'lifestyle': lifestyleScore,
+    'world-news': newsScore
+  }
+  
+  // Get category with max score
+  const maxScore = Math.max(...Object.values(scores))
+  
+  // If no keywords matched, return world-news as default
+  if (maxScore === 0) return 'world-news'
+  
+  // Return the category with highest score
+  for (const [category, score] of Object.entries(scores)) {
+    if (score === maxScore) return category
+  }
+  
+  return 'world-news' // Default fallback
 }

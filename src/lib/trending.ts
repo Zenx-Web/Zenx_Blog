@@ -505,33 +505,99 @@ export async function fetchAllTrendingTopics(): Promise<TrendingTopic[]> {
 
 // Helper function to categorize topics from subreddit
 function getCategoryFromSubreddit(subreddit: string): string {
-  const categoryMap: { [key: string]: string } = {
-    'technology': 'Technology',
-    'worldnews': 'World News',
-    'entertainment': 'Entertainment',
-    'business': 'Business',
-    'sports': 'Sports',
-    'all': 'General'
+  const lower = subreddit.toLowerCase()
+  
+  // Technology subreddits
+  if (['technology', 'tech', 'programming', 'coding', 'apple', 'android', 'microsoft',
+       'google', 'linux', 'gaming', 'pcgaming', 'ps5', 'xbox', 'nintendo',
+       'cryptocurrency', 'bitcoin', 'ethereum', 'artificialintelligence', 'machinelearning'].includes(lower)) {
+    return 'Technology'
   }
   
-  return categoryMap[subreddit] || 'General'
+  // Entertainment subreddits
+  if (['entertainment', 'movies', 'television', 'music', 'celebrity', 'popculture',
+       'netflix', 'anime', 'marvel', 'starwars', 'memes', 'funny', 'videos'].includes(lower)) {
+    return 'Entertainment'
+  }
+  
+  // Sports subreddits
+  if (['sports', 'nfl', 'nba', 'soccer', 'football', 'baseball', 'hockey',
+       'tennis', 'golf', 'mma', 'boxing', 'formula1', 'cricket', 'fitness'].includes(lower)) {
+    return 'Sports'
+  }
+  
+  // Business subreddits
+  if (['business', 'finance', 'investing', 'stocks', 'wallstreetbets', 'entrepreneur',
+       'smallbusiness', 'marketing', 'economics', 'personalfinance'].includes(lower)) {
+    return 'Business'
+  }
+  
+  // Lifestyle subreddits
+  if (['health', 'fitness', 'food', 'cooking', 'recipes', 'travel', 'fashion',
+       'beauty', 'wellness', 'meditation', 'yoga', 'gardening', 'diy'].includes(lower)) {
+    return 'Lifestyle'
+  }
+  
+  // News/World subreddits
+  if (['worldnews', 'news', 'politics', 'science', 'space', 'environment', 'climate'].includes(lower)) {
+    return 'World News'
+  }
+  
+  return 'General'
 }
 
-// Helper function to categorize topics from news content
+// Helper function to categorize topics from news content - ENHANCED
 function getCategoryFromNews(title: string): string {
   const lowerTitle = title.toLowerCase()
   
-  if (lowerTitle.includes('tech') || lowerTitle.includes('ai') || lowerTitle.includes('software')) {
-    return 'Technology'
-  } else if (lowerTitle.includes('business') || lowerTitle.includes('market') || lowerTitle.includes('economy')) {
-    return 'Business'
-  } else if (lowerTitle.includes('sports') || lowerTitle.includes('game') || lowerTitle.includes('player')) {
-    return 'Sports'
-  } else if (lowerTitle.includes('movie') || lowerTitle.includes('celebrity') || lowerTitle.includes('music')) {
-    return 'Entertainment'
-  } else {
-    return 'World News'
-  }
+  // Count matches for each category
+  let techScore = 0
+  let entertainmentScore = 0
+  let sportsScore = 0
+  let businessScore = 0
+  let lifestyleScore = 0
+  
+  // Technology keywords
+  const techWords = ['tech', 'ai', 'software', 'app', 'digital', 'cyber', 'computer', 'internet',
+                     'iphone', 'android', 'google', 'microsoft', 'apple', 'amazon', 'meta',
+                     'crypto', 'bitcoin', 'blockchain', 'robot', 'automation', 'cloud', 'data']
+  techWords.forEach(word => { if (lowerTitle.includes(word)) techScore++ })
+  
+  // Entertainment keywords
+  const entertainmentWords = ['movie', 'film', 'tv', 'show', 'series', 'netflix', 'music', 'album',
+                             'celebrity', 'actor', 'actress', 'singer', 'artist', 'hollywood',
+                             'marvel', 'disney', 'anime', 'gaming', 'video game']
+  entertainmentWords.forEach(word => { if (lowerTitle.includes(word)) entertainmentScore++ })
+  
+  // Sports keywords
+  const sportsWords = ['sport', 'football', 'soccer', 'basketball', 'baseball', 'tennis', 'golf',
+                      'nfl', 'nba', 'mlb', 'fifa', 'olympics', 'championship', 'player', 'team',
+                      'coach', 'match', 'game', 'tournament', 'league']
+  sportsWords.forEach(word => { if (lowerTitle.includes(word)) sportsScore++ })
+  
+  // Business keywords
+  const businessWords = ['business', 'market', 'stock', 'economy', 'finance', 'bank', 'invest',
+                        'company', 'ceo', 'startup', 'profit', 'revenue', 'trade', 'sales',
+                        'ecommerce', 'retail', 'industry']
+  businessWords.forEach(word => { if (lowerTitle.includes(word)) businessScore++ })
+  
+  // Lifestyle keywords
+  const lifestyleWords = ['health', 'fitness', 'diet', 'food', 'recipe', 'travel', 'fashion',
+                         'beauty', 'wellness', 'lifestyle', 'home', 'design', 'yoga', 'meditation']
+  lifestyleWords.forEach(word => { if (lowerTitle.includes(word)) lifestyleScore++ })
+  
+  // Find max score
+  const maxScore = Math.max(techScore, entertainmentScore, sportsScore, businessScore, lifestyleScore)
+  
+  if (maxScore === 0) return 'World News' // Default
+  
+  if (techScore === maxScore) return 'Technology'
+  if (entertainmentScore === maxScore) return 'Entertainment'
+  if (sportsScore === maxScore) return 'Sports'
+  if (businessScore === maxScore) return 'Business'
+  if (lifestyleScore === maxScore) return 'Lifestyle'
+  
+  return 'World News'
 }
 
 // Function to score topic relevance for blog potential
