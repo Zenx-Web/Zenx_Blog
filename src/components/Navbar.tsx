@@ -235,11 +235,11 @@ export default function Navbar() {
 
         {/* Mobile Navigation Slide-in Menu */}
         <div
-          className={`lg:hidden fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+          className={`lg:hidden fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
             isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto overflow-x-hidden">
             {/* Mobile Menu Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">

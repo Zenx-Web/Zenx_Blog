@@ -337,6 +337,8 @@
   font-size: 0.9rem;
   color: #1f2937;
   border: 1px solid #e5e7eb;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .enhanced-blog-content pre {
@@ -345,9 +347,11 @@
   padding: 1.5rem;
   border-radius: 0.5rem;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin: 2rem 0;
   font-size: 0.875rem;
   line-height: 1.6;
+  max-width: 100%;
 }
 
 .enhanced-blog-content pre code {
@@ -366,6 +370,9 @@
   font-size: 1rem;
   background: #ffffff;
   border: 1px solid #e5e7eb;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .enhanced-blog-content table thead {

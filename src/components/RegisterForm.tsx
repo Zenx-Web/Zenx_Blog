@@ -1,22 +1,44 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+
+declare global {
+  interface Window {
+    hcaptcha?: {
+      render: (container: string | HTMLElement, options: {
+        sitekey: string
+        callback: (token: string) => void
+        'error-callback'?: () => void
+        'expired-callback'?: () => void
+      }) => string
+      reset: (widgetId?: string) => void
+      remove: (widgetId: string) => void
+    }
+  }
+}
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const captchaRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
   const { signUp } = useAuth()
   const router = useRouter()
+
+  const captchaSiteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || ''
 
   const oauthRedirectTarget = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -30,6 +52,56 @@ export default function RegisterForm() {
 
     return ''
   }, [])
+
+  // Load hCaptcha script
+  useEffect(() => {
+    if (!captchaSiteKey) return
+    if (typeof window === 'undefined') return
+
+    const script = document.createElement('script')
+    script.src = 'https://js.hcaptcha.com/1/api.js'
+    script.async = true
+    script.defer = true
+    
+    const onScriptLoad = () => {
+      if (captchaRef.current && window.hcaptcha) {
+        try {
+          widgetIdRef.current = window.hcaptcha.render(captchaRef.current, {
+            sitekey: captchaSiteKey,
+            callback: (token: string) => {
+              setCaptchaToken(token)
+            },
+            'error-callback': () => {
+              setCaptchaToken(null)
+              setError('CAPTCHA verification failed. Please try again.')
+            },
+            'expired-callback': () => {
+              setCaptchaToken(null)
+            }
+          })
+        } catch (err) {
+          console.error('hCaptcha render error:', err)
+        }
+      }
+    }
+
+    script.addEventListener('load', onScriptLoad)
+    document.head.appendChild(script)
+
+    return () => {
+      script.removeEventListener('load', onScriptLoad)
+      if (widgetIdRef.current && window.hcaptcha) {
+        try {
+          window.hcaptcha.remove(widgetIdRef.current)
+        } catch (err) {
+          console.error('hCaptcha cleanup error:', err)
+        }
+      }
+      if (document.head.contains(script)) {
+        script.remove()
+      }
+    }
+  }, [captchaSiteKey])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,13 +117,23 @@ export default function RegisterForm() {
       return
     }
 
+    if (captchaSiteKey && !captchaToken) {
+      setError('Please complete the CAPTCHA verification')
+      return
+    }
+
     setLoading(true)
 
-    const { error } = await signUp(email, password, displayName)
+    const { error } = await signUp(email, password, displayName, captchaToken || undefined)
 
     if (error) {
       setError(error.message)
       setLoading(false)
+      // Reset CAPTCHA on error
+      if (widgetIdRef.current && window.hcaptcha) {
+        window.hcaptcha.reset(widgetIdRef.current)
+        setCaptchaToken(null)
+      }
     } else {
       setSuccess(true)
       setTimeout(() => {
@@ -182,15 +264,34 @@ export default function RegisterForm() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 placeholder-gray-400"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 placeholder-gray-400"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters</p>
             </div>
 
@@ -198,15 +299,34 @@ export default function RegisterForm() {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                 Confirm Password
               </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 placeholder-gray-400"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 placeholder-gray-400"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center">
@@ -228,9 +348,15 @@ export default function RegisterForm() {
               </label>
             </div>
 
+            {captchaSiteKey && (
+              <div className="flex justify-center">
+                <div ref={captchaRef} />
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || isOAuthRedirecting}
+              disabled={loading || isOAuthRedirecting || (!!captchaSiteKey && !captchaToken)}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {loading ? 'Creating Account...' : 'Create Account'}

@@ -1080,31 +1080,31 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Zenx Blog Admin Dashboard
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Generate AI-powered blog content from trending topics
           </p>
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm text-gray-500">
               Logged in as <span className="font-semibold text-gray-800">{adminEmail}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={() => void fetchManagedPosts()}
                 disabled={isLoadingPosts}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {isLoadingPosts ? 'Refreshing posts…' : 'Refresh Posts'}
               </button>
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {isLoggingOut ? 'Signing out…' : 'Sign Out'}
               </button>
@@ -1367,7 +1367,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
@@ -1375,13 +1375,13 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 Review, filter, and manage registered readers. Click a user to edit their profile or send account actions.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {userStatusFilters.map((filter) => (
                   <button
                     key={filter.value}
                     onClick={() => setUserStatusFilter(filter.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-medium border transition-colors whitespace-nowrap ${
                       userStatusFilter === filter.value
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
@@ -1394,7 +1394,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
               <button
                 onClick={() => void handleRefreshUsers()}
                 disabled={isLoadingUsers}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {isLoadingUsers ? 'Refreshing…' : 'Refresh Users'}
               </button>
@@ -1403,12 +1403,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex flex-col gap-3 mb-4">
                 <div className="flex-1">
                   <label htmlFor="user-search" className="block text-sm font-medium text-gray-700 mb-1">
                     Search users
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       id="user-search"
                       type="text"
@@ -1423,21 +1423,23 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                       placeholder="Search by email or name…"
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                    <button
-                      onClick={() => void handleUserSearch()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Search
-                    </button>
-                    <button
-                      onClick={() => void handleClearUserSearch()}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                    >
-                      Clear
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => void handleUserSearch()}
+                        className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                      >
+                        Search
+                      </button>
+                      <button
+                        onClick={() => void handleClearUserSearch()}
+                        className="flex-1 sm:flex-none px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 whitespace-nowrap"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500 self-end">
+                <div className="text-sm text-gray-500 text-center sm:text-left">
                   Showing {managedUsers.length} result{managedUsers.length === 1 ? '' : 's'}
                   {userPagination?.hasMore ? ' (more available)' : ''}
                 </div>
@@ -1688,15 +1690,15 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Trending Topics Section */}
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
                 Trending Topics ({filteredTopics.length})
               </h2>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={fetchTrendingTopics}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm transition-colors duration-200 flex items-center gap-2"
+                  className="flex-1 sm:flex-none bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   {loading && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1705,7 +1707,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 </button>
                 <button
                   onClick={() => setTrendingTopics([])}
-                  className="bg-gray-500 text-white px-4 py-3 rounded-lg hover:bg-gray-600 font-medium shadow-sm transition-colors duration-200"
+                  className="flex-1 sm:flex-none bg-gray-500 text-white px-4 py-2 sm:py-3 rounded-lg hover:bg-gray-600 font-medium shadow-sm transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                 >
                   Clear All
                 </button>
@@ -1718,7 +1720,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
               <p className="text-sm text-gray-600 mb-3">
                 Enter any keyword or topic to generate fresh blog ideas instantly!
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={customSearchQuery}
@@ -1730,7 +1732,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 <button
                   onClick={searchCustomTopics}
                   disabled={isSearchingCustom || !customSearchQuery.trim()}
-                  className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm transition-colors duration-200 flex items-center gap-2"
+                  className="w-full sm:w-auto bg-purple-600 text-white px-4 sm:px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm transition-colors duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {isSearchingCustom && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1894,8 +1896,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   </select>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
+              <div className="mt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -1919,8 +1921,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     </span>
                   </label>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm text-gray-500">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                  <div className="text-sm text-gray-500 text-center sm:text-left">
                     {selectedTopic
                       ? 'Pick the mode and length you want, then launch AI generation.'
                       : hasPromptForGeneration
@@ -1930,7 +1932,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   <button
                     onClick={generateBlog}
                     disabled={(!selectedTopic && !hasPromptForGeneration) || isGenerating}
-                    className={`bg-green-600 text-white px-5 py-3 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors ${
+                    className={`w-full sm:w-auto bg-green-600 text-white px-5 py-3 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition-colors whitespace-nowrap ${
                       (!selectedTopic && !hasPromptForGeneration) || isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
                     }`}
                   >
