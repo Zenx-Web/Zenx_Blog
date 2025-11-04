@@ -546,50 +546,99 @@ function getCategoryFromSubreddit(subreddit: string): string {
   return 'General'
 }
 
-// Helper function to categorize topics from news content - ENHANCED
+// Helper function to categorize topics from news content - ENHANCED with priority checking
 function getCategoryFromNews(title: string): string {
   const lowerTitle = title.toLowerCase()
   
-  // Count matches for each category
+  // Priority keywords for news/politics - check these FIRST
+  const priorityNewsKeywords = [
+    'judge', 'court', 'federal', 'government', 'law', 'legal', 'congress', 'senate',
+    'president', 'minister', 'election', 'vote', 'policy', 'legislation',
+    'military', 'army', 'navy', 'national guard', 'deployment', 'war', 'conflict',
+    'climate crisis', 'pandemic', 'covid', 'vaccine', 'emergency', 'disaster', 'crime', 'police'
+  ]
+  
+  // If it's clearly news/politics, return immediately unless it's tech-related news
+  const hasNewsKeywords = priorityNewsKeywords.some(keyword => lowerTitle.includes(keyword))
+  if (hasNewsKeywords) {
+    const techNewsKeywords = ['tech policy', 'ai regulation', 'crypto law']
+    const isTechNews = techNewsKeywords.some(keyword => lowerTitle.includes(keyword))
+    if (!isTechNews) {
+      return 'World News'
+    }
+  }
+  
+  // Weighted scoring - longer, more specific phrases get higher scores
   let techScore = 0
   let entertainmentScore = 0
   let sportsScore = 0
   let businessScore = 0
   let lifestyleScore = 0
   
-  // Technology keywords
-  const techWords = ['tech', 'ai', 'software', 'app', 'digital', 'cyber', 'computer', 'internet',
-                     'iphone', 'android', 'google', 'microsoft', 'apple', 'amazon', 'meta',
-                     'crypto', 'bitcoin', 'blockchain', 'robot', 'automation', 'cloud', 'data']
-  techWords.forEach(word => { if (lowerTitle.includes(word)) techScore++ })
+  // Technology keywords - more specific
+  const techWords = ['ai', 'artificial intelligence', 'machine learning', 'chatgpt',
+                     'software', 'app', 'programming', 'coding', 'digital',
+                     'iphone', 'android', 'smartphone', 'google', 'microsoft', 'apple',
+                     'crypto', 'bitcoin', 'blockchain', 'gaming', 'playstation', 'xbox',
+                     'robot', 'automation', 'cloud', 'cybersecurity', 'hacking']
+  techWords.forEach(word => { 
+    if (lowerTitle.includes(word)) {
+      const weight = word.split(' ').length
+      techScore += weight
+    }
+  })
   
-  // Entertainment keywords
-  const entertainmentWords = ['movie', 'film', 'tv', 'show', 'series', 'netflix', 'music', 'album',
-                             'celebrity', 'actor', 'actress', 'singer', 'artist', 'hollywood',
-                             'marvel', 'disney', 'anime', 'gaming', 'video game']
-  entertainmentWords.forEach(word => { if (lowerTitle.includes(word)) entertainmentScore++ })
+  // Entertainment keywords - specific
+  const entertainmentWords = ['movie', 'film', 'cinema', 'actor', 'actress', 'celebrity',
+                             'music', 'album', 'concert', 'singer', 'artist',
+                             'tv show', 'series', 'netflix', 'disney', 'streaming',
+                             'marvel', 'award', 'grammy', 'oscar', 'fashion', 'beauty']
+  entertainmentWords.forEach(word => { 
+    if (lowerTitle.includes(word)) {
+      const weight = word.split(' ').length
+      entertainmentScore += weight
+    }
+  })
   
-  // Sports keywords
-  const sportsWords = ['sport', 'football', 'soccer', 'basketball', 'baseball', 'tennis', 'golf',
-                      'nfl', 'nba', 'mlb', 'fifa', 'olympics', 'championship', 'player', 'team',
-                      'coach', 'match', 'game', 'tournament', 'league']
-  sportsWords.forEach(word => { if (lowerTitle.includes(word)) sportsScore++ })
+  // Sports keywords - specific
+  const sportsWords = ['football', 'soccer', 'basketball', 'baseball', 'tennis', 'golf',
+                      'nfl', 'nba', 'mlb', 'fifa', 'olympics', 'championship',
+                      'player', 'team', 'coach', 'match', 'tournament', 'league']
+  sportsWords.forEach(word => { 
+    if (lowerTitle.includes(word)) {
+      const weight = word.split(' ').length
+      sportsScore += weight
+    }
+  })
   
-  // Business keywords
-  const businessWords = ['business', 'market', 'stock', 'economy', 'finance', 'bank', 'invest',
-                        'company', 'ceo', 'startup', 'profit', 'revenue', 'trade', 'sales',
-                        'ecommerce', 'retail', 'industry']
-  businessWords.forEach(word => { if (lowerTitle.includes(word)) businessScore++ })
+  // Business keywords - specific
+  const businessWords = ['stock market', 'wall street', 'trading', 'investment',
+                        'startup', 'ipo', 'merger', 'acquisition', 'ceo', 'founder',
+                        'economy', 'inflation', 'recession', 'finance', 'banking',
+                        'revenue', 'profit', 'earnings']
+  businessWords.forEach(word => { 
+    if (lowerTitle.includes(word)) {
+      const weight = word.split(' ').length
+      businessScore += weight
+    }
+  })
   
-  // Lifestyle keywords
-  const lifestyleWords = ['health', 'fitness', 'diet', 'food', 'recipe', 'travel', 'fashion',
-                         'beauty', 'wellness', 'lifestyle', 'home', 'design', 'yoga', 'meditation']
-  lifestyleWords.forEach(word => { if (lowerTitle.includes(word)) lifestyleScore++ })
+  // Lifestyle keywords - specific
+  const lifestyleWords = ['health tips', 'wellness', 'fitness', 'workout', 'diet', 'nutrition',
+                         'recipe', 'cooking', 'travel', 'vacation', 'fashion', 'beauty',
+                         'home decor', 'yoga', 'meditation']
+  lifestyleWords.forEach(word => { 
+    if (lowerTitle.includes(word)) {
+      const weight = word.split(' ').length
+      lifestyleScore += weight
+    }
+  })
   
   // Find max score
   const maxScore = Math.max(techScore, entertainmentScore, sportsScore, businessScore, lifestyleScore)
   
-  if (maxScore === 0) return 'World News' // Default
+  // If no strong match (score < 2), return World News
+  if (maxScore < 2) return 'World News'
   
   if (techScore === maxScore) return 'Technology'
   if (entertainmentScore === maxScore) return 'Entertainment'
