@@ -22,6 +22,7 @@ import PostViewCounter from '@/components/PostViewCounter'
 import ReadingHistoryTracker from '@/components/ReadingHistoryTracker'
 import InlineAd from '@/components/InlineAd'
 import InlineAdInjector from '@/components/InlineAdInjector'
+import BlogTemplateRenderer from '@/components/BlogTemplates/BlogTemplateRenderer'
 
 const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? ''
 const ARTICLE_TOP_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_TOP_SLOT ?? ''
@@ -495,276 +496,29 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     <div className="min-h-screen bg-white">
       <ReadingProgress targetId={articleDomId} />
       <ReadingHistoryTracker postId={post.id} articleElementId={articleDomId} />
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <nav className="mb-8 flex text-sm text-gray-600">
-          <Link href="/" className="hover:text-blue-600">
-            Home
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href={`/?category=${post.category}`} className="hover:text-blue-600 capitalize">
-            {post.category.replace('-', ' ')}
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">{post.title}</span>
-        </nav>
-
-        <header className="mb-10 space-y-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${getCategoryColor(post.category)}`}>
-              {post.category.replace('-', ' ')}
-            </span>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-              <span className="inline-flex items-center">
-                <CalendarIcon className="mr-1.5 h-4 w-4" />
-                {formattedPublishedDate}
-              </span>
-              <span className="inline-flex items-center">
-                <ClockIcon className="mr-1.5 h-4 w-4" />
-                {readTimeMinutes} min read
-              </span>
-              <span className="inline-flex items-center">
-                <EyeIcon className="mr-1.5 h-4 w-4" />
-                <PostViewCounter
-                  postId={post.id}
-                  slug={post.slug}
-                  initialViews={post.views ?? 0}
-                  className="ml-0.5"
-                />
-              </span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            {post.title}
-          </h1>
-          <p className="max-w-3xl text-lg text-slate-600 sm:text-xl">
-            {post.excerpt}
-          </p>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <ShareIcon className="h-4 w-4" />
-            <span className="font-medium text-slate-600">Share</span>
-            <a
-              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
-            >
-              X (Twitter)
-            </a>
-            <a
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
-            >
-              Facebook
-            </a>
-            <a
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
-            >
-              LinkedIn
-            </a>
-            <a
-              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
-            >
-              WhatsApp
-            </a>
-            <SavePostButton
-              postId={post.id}
-              postSlug={post.slug}
-              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
-            />
-          </div>
-
-          <div className="mt-6">
-            <AdSlot
-              slotId={ARTICLE_TOP_AD_SLOT}
-              format="auto"
-              variant="minimal"
-              className="mx-auto max-w-4xl"
-              slotStyle={{ display: 'block', minHeight: 90 }}
-              title="Sponsored Spotlight"
-            />
-          </div>
-        </header>
-
-        {post.featured_image && (
-          <div className="mb-10 overflow-hidden rounded-3xl">
-            <Image
-              src={post.featured_image}
-              alt={post.title}
-              width={1200}
-              height={650}
-              className="h-72 w-full object-cover sm:h-96"
-              priority
-            />
-          </div>
-        )}
-
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
-          <div className="space-y-10">
-            <AdSlot
-              slotId={ARTICLE_MID_AD_SLOT}
-              format="fluid"
-              layout="in-article"
-              variant="bare"
-              showLabel={false}
-              className="text-center"
-              slotStyle={{ display: 'block', margin: '16px auto' }}
-            />
-
-            <article id={articleDomId} className="prose prose-lg mx-auto max-w-none text-slate-800 prose-headings:text-slate-900 prose-a:text-blue-600">
-              {isHtmlContent ? (
-                <Fragment>
-                  <div
-                    className="enhanced-blog-content"
-                    dangerouslySetInnerHTML={{ __html: processedHtml }}
-                  />
-                  <InlineAdInjector
-                    articleElementId={articleDomId}
-                    clientId={ADSENSE_CLIENT_ID}
-                    primarySlot={ARTICLE_INLINE_AD_SLOT_PRIMARY}
-                    secondarySlot={ARTICLE_INLINE_AD_SLOT_SECONDARY}
-                  />
-                </Fragment>
-              ) : (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                  components={markdownComponents}
-                >
-                  {post.content}
-                </ReactMarkdown>
-              )}
-            </article>
-
-            <AdSlot
-              slotId={ARTICLE_MID_AD_SLOT}
-              format="fluid"
-              layout="in-article"
-              variant="bare"
-              showLabel={false}
-              className="text-center"
-              slotStyle={{ display: 'block', margin: '16px auto' }}
-            />
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <AdSlot
-                slotId={ARTICLE_INLINE_AD_SLOT_PRIMARY}
-                format="auto"
-                variant="panel"
-                className="mx-auto w-full"
-                slotStyle={{ minHeight: 250 }}
-                title="Sponsored Insight"
-              />
-              <AdSlot
-                slotId={ARTICLE_INLINE_AD_SLOT_SECONDARY}
-                format="auto"
-                variant="panel"
-                className="mx-auto w-full"
-                slotStyle={{ minHeight: 250 }}
-                title="Partner Spotlight"
-              />
-            </div>
-
-            {postTags.length > 0 && (
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Tags</h2>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {postTags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {relatedPosts.length > 0 && (
-              <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold text-slate-900">Related Articles</h2>
-                  <span className="text-sm text-slate-500">Based on category</span>
-                </div>
-                <div className="grid gap-6 md:grid-cols-2">
-                  {relatedPosts.map((relatedPost) => (
-                    <Link
-                      key={relatedPost.id}
-                      href={`/blog/${relatedPost.slug}`}
-                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 transition hover:-translate-y-1 hover:border-blue-300 hover:bg-white hover:shadow-lg"
-                    >
-                      {relatedPost.featured_image && (
-                        <div className="relative h-40 w-full overflow-hidden">
-                          <Image
-                            src={relatedPost.featured_image}
-                            alt={relatedPost.title}
-                            fill
-                            className="object-cover transition duration-300 group-hover:scale-105"
-                          />
-                        </div>
-                      )}
-                      <div className="flex flex-1 flex-col gap-3 p-5">
-                        <h3 className="text-lg font-semibold text-slate-900 transition group-hover:text-blue-600">
-                          {relatedPost.title}
-                        </h3>
-                        <p className="flex-1 text-sm text-slate-600 line-clamp-3">{relatedPost.excerpt}</p>
-                        <div className="text-xs font-medium text-slate-500">
-                          <ClockIcon className="mr-1 inline h-3 w-3" />
-                          {relatedPost.read_time} min read
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <AdSlot
-              slotId={ARTICLE_FOOTER_AD_SLOT}
-              format="fluid"
-              layout="in-article"
-              variant="bare"
-              showLabel={false}
-              className="text-center"
-              slotStyle={{ display: 'block', margin: '16px auto' }}
-            />
-          </div>
-
-          <aside className="space-y-8">
-            <TableOfContents headings={headings} />
-            <NewsletterSubscribe />
-            <AdSlot
-              slotId={ARTICLE_SIDEBAR_AD_SLOT}
-              format="autorelaxed"
-              variant="minimal"
-              title="Featured Stories"
-              className="bg-white"
-              slotStyle={{ display: 'block' }}
-            />
-            <AdSlot
-              slotId={ARTICLE_SIDEBAR_AD_SLOT}
-              format="autorelaxed"
-              variant="minimal"
-              title="More Stories"
-              className="bg-white"
-              slotStyle={{ display: 'block' }}
-            />
-            <AdSlot
-              slotId={ARTICLE_SIDEBAR_AD_SLOT}
-              format="autorelaxed"
-              variant="minimal"
-              title="Trending Now"
-              className="bg-white"
-              slotStyle={{ display: 'block' }}
-            />
-          </aside>
-        </div>
-      </div>
+      <PostViewCounter
+        postId={post.id}
+        slug={post.slug}
+        initialViews={post.views ?? 0}
+        className="hidden"
+      />
+      
+      <BlogTemplateRenderer
+        post={post}
+        relatedPosts={relatedPosts}
+        headings={headings}
+        formattedDate={formattedPublishedDate}
+        shareUrl={shareUrl}
+        processedHtml={processedHtml}
+        isHtmlContent={isHtmlContent}
+        adsenseClientId={ADSENSE_CLIENT_ID}
+        adSlots={{
+          top: ARTICLE_TOP_AD_SLOT,
+          sidebar: ARTICLE_SIDEBAR_AD_SLOT,
+          mid: ARTICLE_MID_AD_SLOT,
+          footer: ARTICLE_FOOTER_AD_SLOT
+        }}
+      />
     </div>
   )
 }

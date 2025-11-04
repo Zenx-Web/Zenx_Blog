@@ -2180,16 +2180,13 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   <label className="block text-sm font-medium text-gray-800 mb-2">
                     Category 
                     {selectedTopic && (
-                      <span className="text-green-600 text-xs ml-1">(Auto-detected)</span>
+                      <span className="text-blue-600 text-xs ml-1">(Auto-detected - You can override)</span>
                     )}
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    disabled={Boolean(selectedTopic)}
-                    className={`w-full p-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      selectedTopic ? 'border-green-300 bg-gray-100 text-gray-700' : 'border-gray-300 bg-white text-gray-900'
-                    }`}
+                    className="w-full p-3 border border-gray-300 bg-white text-gray-900 rounded-lg font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-400 transition-colors"
                   >
                     <option value="technology" className="text-gray-900 font-medium">💻 Technology</option>
                     <option value="entertainment" className="text-gray-900 font-medium">🎬 Entertainment</option>
@@ -2197,6 +2194,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     <option value="lifestyle" className="text-gray-900 font-medium">🌟 Lifestyle</option>
                     <option value="sports" className="text-gray-900 font-medium">⚽ Sports</option>
                     <option value="world-news" className="text-gray-900 font-medium">📰 World News</option>
+                    <option value="science" className="text-gray-900 font-medium">🔬 Science</option>
+                    <option value="health" className="text-gray-900 font-medium">🏥 Health</option>
                   </select>
                 </div>
               </div>

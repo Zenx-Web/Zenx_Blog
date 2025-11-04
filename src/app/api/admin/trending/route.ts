@@ -100,21 +100,47 @@ export async function GET() {
 // Fallback topics for when external APIs fail
 function getFallbackTopics(): TrendingTopic[] {
   return [
-    { topic: "Latest iPhone 16 Features and Release Date", source: "Tech News", relevanceScore: 2500, category: "Technology" },
-    { topic: "OpenAI GPT-5 Launch Rumors and Speculation", source: "AI News", relevanceScore: 2300, category: "Technology" },
-    { topic: "Netflix New Series October 2025 Releases", source: "Entertainment", relevanceScore: 2100, category: "Entertainment" },
-    { topic: "Tesla Cybertruck Production Updates", source: "Auto News", relevanceScore: 2000, category: "Technology" },
-    { topic: "World Cup 2026 Qualification Updates", source: "Sports News", relevanceScore: 1900, category: "Sports" },
-    { topic: "Climate Change Summit 2025 Key Outcomes", source: "World News", relevanceScore: 1800, category: "World News" },
-    { topic: "Cryptocurrency Market Trends October 2025", source: "Finance", relevanceScore: 1700, category: "Business" },
-    { topic: "SpaceX Mars Mission Latest Developments", source: "Space News", relevanceScore: 1600, category: "Technology" },
-    { topic: "Healthy Living Trends for Winter 2025", source: "Lifestyle", relevanceScore: 1500, category: "Lifestyle" },
-    { topic: "Gaming Industry Revenue Growth in 2025", source: "Gaming News", relevanceScore: 1400, category: "Entertainment" },
-    { topic: "Remote Work Statistics and Future Predictions", source: "Business News", relevanceScore: 1300, category: "Business" },
-    { topic: "Social Media Algorithm Changes Impact", source: "Tech News", relevanceScore: 1200, category: "Technology" },
-    { topic: "Sustainable Fashion Brands Rising in 2025", source: "Fashion", relevanceScore: 1100, category: "Lifestyle" },
-    { topic: "Electric Vehicle Charging Infrastructure Expansion", source: "Auto News", relevanceScore: 1000, category: "Technology" },
-    { topic: "Mental Health Awareness Month Activities", source: "Health News", relevanceScore: 900, category: "Lifestyle" }
+    // Entertainment (5 topics)
+    { topic: "Netflix New Series November 2025 Must-Watch Shows", source: "Entertainment", relevanceScore: 2500, category: "Entertainment" },
+    { topic: "Taylor Swift Eras Tour 2025 Final Concerts", source: "Music", relevanceScore: 2400, category: "Entertainment" },
+    { topic: "Marvel Phase 6 Movie Release Schedule Revealed", source: "Movies", relevanceScore: 2300, category: "Entertainment" },
+    { topic: "Grammy Awards 2025 Predictions and Favorites", source: "Music", relevanceScore: 2200, category: "Entertainment" },
+    { topic: "Top Trending TikTok Challenges This Week", source: "Social Media", relevanceScore: 2100, category: "Entertainment" },
+    
+    // Lifestyle (5 topics)
+    { topic: "Winter 2025 Fashion Trends You Need to Know", source: "Fashion", relevanceScore: 2000, category: "Lifestyle" },
+    { topic: "Best Healthy Meal Prep Ideas for Busy People", source: "Health", relevanceScore: 1900, category: "Lifestyle" },
+    { topic: "Top Travel Destinations for Winter Holidays 2025", source: "Travel", relevanceScore: 1800, category: "Lifestyle" },
+    { topic: "Morning Routine Habits of Successful People", source: "Wellness", relevanceScore: 1700, category: "Lifestyle" },
+    { topic: "Home Decor Ideas to Refresh Your Space in 2025", source: "Home", relevanceScore: 1600, category: "Lifestyle" },
+    
+    // Technology (5 topics)
+    { topic: "iPhone 16 Pro Max Features and Release Date", source: "Tech News", relevanceScore: 2600, category: "Technology" },
+    { topic: "OpenAI GPT-5 Rumors and Expected Capabilities", source: "AI News", relevanceScore: 2500, category: "Technology" },
+    { topic: "Tesla Cybertruck 2025 Production Updates", source: "Auto Tech", relevanceScore: 2400, category: "Technology" },
+    { topic: "PlayStation 6 Development Leaks and Specs", source: "Gaming", relevanceScore: 2300, category: "Technology" },
+    { topic: "Best Gaming Laptops Under $1500 in 2025", source: "Gaming Tech", relevanceScore: 2200, category: "Technology" },
+    
+    // Sports (5 topics)
+    { topic: "World Cup 2026 Qualification Latest Results", source: "Soccer", relevanceScore: 2100, category: "Sports" },
+    { topic: "NBA Season 2025-26 Championship Predictions", source: "Basketball", relevanceScore: 2000, category: "Sports" },
+    { topic: "NFL Playoffs 2025 Teams and Predictions", source: "Football", relevanceScore: 1900, category: "Sports" },
+    { topic: "Cristiano Ronaldo Latest Transfer News", source: "Soccer", relevanceScore: 1800, category: "Sports" },
+    { topic: "Olympics 2026 Winter Games Preparation Updates", source: "Olympics", relevanceScore: 1700, category: "Sports" },
+    
+    // Business (5 topics)
+    { topic: "Stock Market Trends November 2025 Analysis", source: "Finance", relevanceScore: 1900, category: "Business" },
+    { topic: "Cryptocurrency Market Recovery 2025 Outlook", source: "Crypto", relevanceScore: 1800, category: "Business" },
+    { topic: "Remote Work vs Office Return Debate in 2025", source: "Business News", relevanceScore: 1700, category: "Business" },
+    { topic: "Top Startup Success Stories of 2025", source: "Entrepreneurship", relevanceScore: 1600, category: "Business" },
+    { topic: "Best Side Hustles to Start in 2025", source: "Finance", relevanceScore: 1500, category: "Business" },
+    
+    // World News (5 topics)
+    { topic: "Climate Change Summit 2025 Key Decisions", source: "World News", relevanceScore: 1800, category: "World News" },
+    { topic: "Global Economy Outlook for 2026", source: "Economics", relevanceScore: 1700, category: "World News" },
+    { topic: "Space Exploration 2025 Major Achievements", source: "Science", relevanceScore: 1600, category: "World News" },
+    { topic: "Renewable Energy Breakthroughs in 2025", source: "Environment", relevanceScore: 1500, category: "World News" },
+    { topic: "AI Regulation Policies Around the World", source: "Technology Policy", relevanceScore: 1400, category: "World News" }
   ]
 }
 

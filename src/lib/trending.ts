@@ -75,7 +75,65 @@ async function searchReddit(query: string): Promise<TrendingTopic[]> {
     
     const results: TrendingTopic[] = []
     
-    // Try multiple time ranges to get more results
+    // Detect what type of query this is and target specific subreddits
+    const queryLower = query.toLowerCase()
+    const targetSubreddits: string[] = []
+    
+    // Add category-specific subreddits based on query
+    if (queryLower.includes('fitness') || queryLower.includes('workout') || queryLower.includes('exercise') || queryLower.includes('gym')) {
+      targetSubreddits.push('fitness', 'loseit', 'bodyweightfitness', 'gainit')
+    }
+    if (queryLower.includes('health') || queryLower.includes('wellness') || queryLower.includes('diet') || queryLower.includes('nutrition')) {
+      targetSubreddits.push('health', 'nutrition', 'wellness', 'healthyfood')
+    }
+    if (queryLower.includes('travel') || queryLower.includes('vacation') || queryLower.includes('destination')) {
+      targetSubreddits.push('travel', 'solotravel', 'backpacking', 'digitalnomad')
+    }
+    if (queryLower.includes('food') || queryLower.includes('cooking') || queryLower.includes('recipe')) {
+      targetSubreddits.push('food', 'cooking', 'recipes', 'eatcheapandhealthy')
+    }
+    if (queryLower.includes('fashion') || queryLower.includes('style')) {
+      targetSubreddits.push('fashion', 'malefashionadvice', 'femalefashionadvice')
+    }
+    
+    // If we have targeted subreddits, search them directly first
+    if (targetSubreddits.length > 0) {
+      for (const subreddit of targetSubreddits.slice(0, 3)) {
+        try {
+          const response = await axios.get(`https://www.reddit.com/r/${subreddit}/search.json`, {
+            params: {
+              q: query,
+              restrict_sr: true,
+              sort: 'relevance',
+              limit: 10,
+              t: 'month'
+            },
+            timeout: 2000,
+            headers: {
+              'User-Agent': 'ZenxBlog/1.0'
+            }
+          })
+          
+          const posts = response.data.data.children
+          posts.forEach(({ data }: any) => {
+            if (data.title && data.title.length > 15) {
+              results.push({
+                topic: cleanTopicTitle(data.title),
+                source: `Reddit r/${subreddit}`,
+                relevanceScore: calculateRelevanceScore(data.score, data.num_comments),
+                category: getCategoryFromSubreddit(subreddit),
+                url: `https://reddit.com${data.permalink}`,
+                searchQuery: query
+              })
+            }
+          })
+        } catch (err) {
+          console.warn(`Targeted search failed for r/${subreddit}`)
+        }
+      }
+    }
+    
+    // Try multiple time ranges to get more results from general search
     const timeRanges = ['day', 'week', 'month']
     
     for (const timeRange of timeRanges) {
@@ -110,7 +168,7 @@ async function searchReddit(query: string): Promise<TrendingTopic[]> {
         results.push(...validPosts)
         
         // If we got enough results, break early
-        if (results.length >= 15) break
+        if (results.length >= 20) break
       } catch (err) {
         console.warn(`Reddit search failed for timeRange ${timeRange}:`, err)
         continue
@@ -446,11 +504,27 @@ export async function fetchAllTrendingTopics(): Promise<TrendingTopic[]> {
     return Promise.race([fetchFunction(), timeoutPromise])
   }
   
-  const [googleTrends, redditTrends, newsTrends, twitterTrends] = await Promise.allSettled([
+  // Fetch category-specific topics to ensure variety
+  const [
+    googleTrends, 
+    redditTrends, 
+    newsTrends, 
+    twitterTrends,
+    entertainmentTopics,
+    lifestyleTopics,
+    sportsTopics,
+    businessTopics,
+    techTopics
+  ] = await Promise.allSettled([
     fetchWithTimeout(() => fetchGoogleTrends()),
     fetchWithTimeout(() => fetchRedditTrends()),
     fetchWithTimeout(() => fetchNewsTrends()),
-    fetchWithTimeout(() => fetchTwitterTrends())
+    fetchWithTimeout(() => fetchTwitterTrends()),
+    fetchWithTimeout(() => fetchCategoryTopics('entertainment')),
+    fetchWithTimeout(() => fetchCategoryTopics('lifestyle')),
+    fetchWithTimeout(() => fetchCategoryTopics('sports')),
+    fetchWithTimeout(() => fetchCategoryTopics('business')),
+    fetchWithTimeout(() => fetchCategoryTopics('technology'))
   ])
   
   const allTrends: TrendingTopic[] = []
@@ -489,7 +563,33 @@ export async function fetchAllTrendingTopics(): Promise<TrendingTopic[]> {
     console.log(`✗ Twitter failed: ${twitterTrends.reason}`)
   }
   
-  console.log(`Successfully fetched from ${successfulSources}/4 sources, total topics: ${allTrends.length}`)
+  // Add category-specific topics
+  if (entertainmentTopics.status === 'fulfilled') {
+    allTrends.push(...entertainmentTopics.value)
+    console.log(`✓ Entertainment: ${entertainmentTopics.value.length} topics`)
+  }
+  
+  if (lifestyleTopics.status === 'fulfilled') {
+    allTrends.push(...lifestyleTopics.value)
+    console.log(`✓ Lifestyle: ${lifestyleTopics.value.length} topics`)
+  }
+  
+  if (sportsTopics.status === 'fulfilled') {
+    allTrends.push(...sportsTopics.value)
+    console.log(`✓ Sports: ${sportsTopics.value.length} topics`)
+  }
+  
+  if (businessTopics.status === 'fulfilled') {
+    allTrends.push(...businessTopics.value)
+    console.log(`✓ Business: ${businessTopics.value.length} topics`)
+  }
+  
+  if (techTopics.status === 'fulfilled') {
+    allTrends.push(...techTopics.value)
+    console.log(`✓ Technology: ${techTopics.value.length} topics`)
+  }
+  
+  console.log(`Successfully fetched from sources, total topics: ${allTrends.length}`)
   
   // Remove duplicates and sort by relevance
   const uniqueTrends = allTrends.filter((trend, index, self) => 
@@ -501,6 +601,57 @@ export async function fetchAllTrendingTopics(): Promise<TrendingTopic[]> {
   return uniqueTrends
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .slice(0, 50) // Top 50 trending topics
+}
+
+// Fetch category-specific topics from Reddit
+async function fetchCategoryTopics(category: string): Promise<TrendingTopic[]> {
+  const subredditMap: { [key: string]: string[] } = {
+    'entertainment': ['movies', 'television', 'music', 'netflix', 'entertainment', 'celebrity'],
+    'lifestyle': ['fitness', 'health', 'food', 'cooking', 'travel', 'fashion', 'beauty'],
+    'sports': ['sports', 'nfl', 'nba', 'soccer', 'football', 'basketball'],
+    'business': ['business', 'stocks', 'investing', 'entrepreneur', 'finance'],
+    'technology': ['technology', 'programming', 'gaming', 'pcgaming', 'gadgets']
+  }
+  
+  const subreddits = subredditMap[category] || []
+  if (subreddits.length === 0) return []
+  
+  try {
+    const topics: TrendingTopic[] = []
+    
+    // Fetch from multiple subreddits for this category
+    for (const subreddit of subreddits.slice(0, 3)) {
+      try {
+        const response = await axios.get(`https://www.reddit.com/r/${subreddit}/hot.json`, {
+          params: { limit: 10 },
+          timeout: 2000,
+          headers: {
+            'User-Agent': 'ZenxBlog/1.0'
+          }
+        })
+        
+        const posts = response.data.data.children
+        posts.forEach(({ data }: any) => {
+          if (data.title && data.title.length > 15) {
+            topics.push({
+              topic: cleanTopicTitle(data.title),
+              source: `Reddit r/${subreddit}`,
+              relevanceScore: calculateRelevanceScore(data.score, data.num_comments),
+              category: category.charAt(0).toUpperCase() + category.slice(1),
+              url: `https://reddit.com${data.permalink}`
+            })
+          }
+        })
+      } catch (err) {
+        console.warn(`Failed to fetch from r/${subreddit}`)
+      }
+    }
+    
+    return topics.slice(0, 5) // Top 5 per category
+  } catch (error) {
+    console.warn(`Category fetch failed for ${category}:`, error)
+    return []
+  }
 }
 
 // Helper function to categorize topics from subreddit
@@ -522,7 +673,7 @@ function getCategoryFromSubreddit(subreddit: string): string {
   
   // Sports subreddits
   if (['sports', 'nfl', 'nba', 'soccer', 'football', 'baseball', 'hockey',
-       'tennis', 'golf', 'mma', 'boxing', 'formula1', 'cricket', 'fitness'].includes(lower)) {
+       'tennis', 'golf', 'mma', 'boxing', 'formula1', 'cricket'].includes(lower)) {
     return 'Sports'
   }
   
@@ -533,8 +684,8 @@ function getCategoryFromSubreddit(subreddit: string): string {
   }
   
   // Lifestyle subreddits
-  if (['health', 'fitness', 'food', 'cooking', 'recipes', 'travel', 'fashion',
-       'beauty', 'wellness', 'meditation', 'yoga', 'gardening', 'diy'].includes(lower)) {
+  if (['health', 'fitness', 'loseit', 'bodyweightfitness', 'food', 'cooking', 'recipes', 'travel', 'fashion',
+       'beauty', 'wellness', 'meditation', 'yoga', 'gardening', 'diy', 'interiordesign', 'homeimprovement'].includes(lower)) {
     return 'Lifestyle'
   }
   
@@ -623,10 +774,16 @@ function getCategoryFromNews(title: string): string {
     }
   })
   
-  // Lifestyle keywords - specific
-  const lifestyleWords = ['health tips', 'wellness', 'fitness', 'workout', 'diet', 'nutrition',
-                         'recipe', 'cooking', 'travel', 'vacation', 'fashion', 'beauty',
-                         'home decor', 'yoga', 'meditation']
+  // Lifestyle keywords - specific and comprehensive
+  const lifestyleWords = ['health tips', 'wellness', 'wellbeing', 'self-care',
+                         'fitness', 'workout', 'exercise', 'gym', 'training',
+                         'diet', 'nutrition', 'weight loss', 'healthy eating',
+                         'recipe', 'cooking', 'food', 'meal prep',
+                         'travel', 'vacation', 'destination', 'tourism',
+                         'home decor', 'interior design', 'diy',
+                         'yoga', 'meditation', 'mindfulness',
+                         'parenting', 'family', 'relationship',
+                         'sustainable living', 'eco-friendly']
   lifestyleWords.forEach(word => { 
     if (lowerTitle.includes(word)) {
       const weight = word.split(' ').length
