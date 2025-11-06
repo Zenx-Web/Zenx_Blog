@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { AuthProvider } from '@/lib/auth-context'
+import { ThemeProvider } from '@/lib/theme-context'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -75,13 +76,15 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`antialiased bg-gray-50 ${geistSans.className}`}>
+      <body className={`antialiased bg-gray-50 ${geistSans.className} m-0 p-0`}>
         <AuthProvider>
-          <Navbar />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
+          <ThemeProvider>
+            <Navbar />
+            <main className="min-h-screen mt-0">
+              {children}
+            </main>
+            <Footer />
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

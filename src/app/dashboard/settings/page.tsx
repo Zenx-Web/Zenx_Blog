@@ -4,16 +4,18 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { useTheme } from '@/lib/theme-context'
 
 export default function DashboardSettingsPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const { profile, loading, updateProfile } = useUserProfile()
+  const { theme: currentTheme, setTheme: setGlobalTheme } = useTheme()
 
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [emailNotifications, setEmailNotifications] = useState(true)
-  const [theme, setTheme] = useState<'light' | 'dark' | ''>('')
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -28,8 +30,8 @@ export default function DashboardSettingsPage() {
     setDisplayName(profile.display_name ?? '')
     setBio(profile.bio ?? '')
     setEmailNotifications(profile.preferences?.emailNotifications ?? true)
-    const storedTheme = profile.preferences?.theme
-    setTheme(storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : '')
+    const storedTheme = profile.preferences?.theme as 'light' | 'dark' | 'system' | undefined
+    setTheme(storedTheme || 'system')
   }, [profile])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -37,12 +39,15 @@ export default function DashboardSettingsPage() {
     setSaving(true)
     setFeedback(null)
 
+    // Apply theme globally
+    setGlobalTheme(theme)
+
     const { error } = await updateProfile({
       display_name: displayName,
       bio,
       preferences: {
         emailNotifications,
-        theme: theme || undefined
+        theme
       }
     })
 
@@ -139,10 +144,10 @@ export default function DashboardSettingsPage() {
                   id="theme"
                   name="theme"
                   value={theme}
-                  onChange={(event) => setTheme(event.target.value as 'light' | 'dark' | '')}
+                  onChange={(event) => setTheme(event.target.value as 'light' | 'dark' | 'system')}
                   className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >
-                  <option value="">Follow system setting</option>
+                  <option value="system">Follow system setting</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>
@@ -166,8 +171,8 @@ export default function DashboardSettingsPage() {
                 setDisplayName(profile?.display_name ?? '')
                 setBio(profile?.bio ?? '')
                 setEmailNotifications(profile?.preferences?.emailNotifications ?? true)
-                const storedTheme = profile?.preferences?.theme
-                setTheme(storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : '')
+                const storedTheme = profile?.preferences?.theme as 'light' | 'dark' | 'system' | undefined
+                setTheme(storedTheme || 'system')
                 setFeedback(null)
               }}
               className="rounded-lg border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
