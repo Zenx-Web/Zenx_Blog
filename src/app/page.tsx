@@ -90,13 +90,11 @@ export default async function Home({ searchParams }: HomePageProps) {
   const { posts, featuredPosts } = await getInitialPosts(category, search)
 
   return (
-    <main>
-      <BlogList 
-        initialPosts={posts}
-        initialFeaturedPosts={featuredPosts}
-        category={category}
-        searchQuery={search}
-      />
-    </main>
+    <BlogList 
+      initialPosts={posts}
+      initialFeaturedPosts={featuredPosts}
+      category={category}
+      searchQuery={search}
+    />
   )
 }
