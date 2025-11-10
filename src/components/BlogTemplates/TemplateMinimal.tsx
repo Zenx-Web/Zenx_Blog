@@ -43,7 +43,7 @@ export default function TemplateMinimal({
   return (
     <div className="min-h-screen bg-white">
       {/* Minimal Header */}
-      <div className="mx-auto max-w-3xl px-4 py-16">
+      <div className="mx-auto max-w-3xl px-4 py-12">
         <div className="text-center">
           {/* Category - Minimal */}
           <div className="mb-6">

@@ -43,7 +43,7 @@ export default function TemplateClassic({
   return (
     <div className="bg-white">
       {/* Classic Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white">
+      <div className="bg-gradient-to-b from-gray-50 to-white pt-0">
         <div className="mx-auto max-w-4xl px-4 py-12">
           {/* Category Badge */}
           <div className="mb-4">

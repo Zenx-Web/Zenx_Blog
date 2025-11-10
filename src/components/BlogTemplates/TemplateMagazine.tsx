@@ -43,7 +43,7 @@ export default function TemplateMagazine({
   return (
     <div className="bg-white">
       {/* Magazine-Style Header */}
-      <div className="border-b-4 border-black bg-white">
+      <div className="border-b-4 border-black bg-white pt-0">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="mb-4 flex items-center gap-4">
             <span className={`rounded px-3 py-1 text-xs font-bold uppercase tracking-widest ${getCategoryColor(post.category)}`}>

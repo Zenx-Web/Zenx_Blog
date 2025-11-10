@@ -493,7 +493,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pt-6">
       <ReadingProgress targetId={articleDomId} />
       <ReadingHistoryTracker postId={post.id} articleElementId={articleDomId} />
       <PostViewCounter

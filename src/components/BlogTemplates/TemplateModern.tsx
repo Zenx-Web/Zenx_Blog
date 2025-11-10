@@ -43,7 +43,7 @@ export default function TemplateModern({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* Modern Full-Width Hero */}
-      <div className="relative">
+      <div className="relative pt-0">
         {post.featured_image && (
           <div className="relative h-[60vh] w-full">
             <Image
