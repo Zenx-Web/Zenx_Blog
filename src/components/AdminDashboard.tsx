@@ -525,7 +525,19 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       .replace(/(^-|-$)/g, '') || 'zenx-blog-post'
     
     // Limit slug to 100 characters to avoid database index issues
-    return slug.length > 100 ? slug.substring(0, 100).replace(/-+$/, '') : slug
+    const finalSlug = slug.length > 100 ? slug.substring(0, 100).replace(/-+$/, '') : slug
+    
+    // Debug logging
+    if (finalSlug.length > 100) {
+      console.error('SLUG TOO LONG:', {
+        originalTitle: value,
+        intermediateSlug: slug,
+        finalSlug: finalSlug,
+        finalLength: finalSlug.length
+      })
+    }
+    
+    return finalSlug
   }
 
   const fetchTrendingTopics = useCallback(async () => {

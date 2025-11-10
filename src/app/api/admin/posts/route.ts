@@ -149,10 +149,23 @@ async function ensureUniqueSlug(baseSlug: string, currentId?: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '') || 'zenx-blog-post'
 
-  let uniqueSlug = normalizedSlug
+  // Ensure base slug is not longer than 95 characters to allow for counter suffix
+  const maxBaseLength = 95
+  const truncatedSlug = normalizedSlug.length > maxBaseLength 
+    ? normalizedSlug.substring(0, maxBaseLength).replace(/-+$/, '') 
+    : normalizedSlug
+
+  let uniqueSlug = truncatedSlug
   let counter = 1
 
   while (true) {
+    // Ensure final slug never exceeds 100 characters
+    if (uniqueSlug.length > 100) {
+      const counterStr = counter.toString()
+      const maxLength = 100 - counterStr.length - 1 // -1 for the hyphen
+      uniqueSlug = truncatedSlug.substring(0, maxLength).replace(/-+$/, '') + '-' + counterStr
+    }
+
     const { data, error } = await supabaseAdmin
       .from('blog_posts')
       .select('id')
@@ -172,7 +185,9 @@ async function ensureUniqueSlug(baseSlug: string, currentId?: string) {
       return uniqueSlug
     }
 
-    uniqueSlug = `${normalizedSlug}-${counter}`
+    const counterStr = counter.toString()
+    const maxLength = 100 - counterStr.length - 1 // -1 for the hyphen
+    uniqueSlug = truncatedSlug.substring(0, maxLength).replace(/-+$/, '') + '-' + counterStr
     counter += 1
   }
 }
