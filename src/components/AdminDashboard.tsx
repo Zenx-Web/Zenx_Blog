@@ -518,11 +518,14 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       return 'zenx-blog-post'
     }
 
-    return value
+    const slug = value
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '') || 'zenx-blog-post'
+    
+    // Limit slug to 100 characters to avoid database index issues
+    return slug.length > 100 ? slug.substring(0, 100).replace(/-+$/, '') : slug
   }
 
   const fetchTrendingTopics = useCallback(async () => {
