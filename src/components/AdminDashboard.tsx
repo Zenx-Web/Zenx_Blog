@@ -2196,6 +2196,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     <option value="world-news" className="text-gray-900 font-medium">📰 World News</option>
                     <option value="science" className="text-gray-900 font-medium">🔬 Science</option>
                     <option value="health" className="text-gray-900 font-medium">🏥 Health</option>
+                    <option value="politics" className="text-gray-900 font-medium">🏛️ Politics</option>
+                    <option value="other" className="text-gray-900 font-medium">📝 Other</option>
                   </select>
                 </div>
               </div>
@@ -2642,15 +2644,16 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   onChange={(e) => setManualBlogCategory(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="Technology">Technology</option>
-                  <option value="Business">Business</option>
-                  <option value="Lifestyle">Lifestyle</option>
-                  <option value="Health">Health</option>
-                  <option value="Entertainment">Entertainment</option>
-                  <option value="Science">Science</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Politics">Politics</option>
-                  <option value="Other">Other</option>
+                  <option value="technology">💻 Technology</option>
+                  <option value="entertainment">🎬 Entertainment</option>
+                  <option value="business">💼 Business</option>
+                  <option value="lifestyle">🌟 Lifestyle</option>
+                  <option value="sports">⚽ Sports</option>
+                  <option value="world-news">📰 World News</option>
+                  <option value="science">🔬 Science</option>
+                  <option value="health">🏥 Health</option>
+                  <option value="politics">🏛️ Politics</option>
+                  <option value="other">📝 Other</option>
                 </select>
               </div>
 

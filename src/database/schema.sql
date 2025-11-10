@@ -111,7 +111,9 @@ INSERT INTO categories (name, slug, description, color) VALUES
 ('Sports', 'sports', 'Sports news and trending events', '#EF4444'),
 ('World News', 'world-news', 'Breaking news and global events', '#6B7280'),
 ('Science', 'science', 'Scientific research and discoveries', '#06B6D4'),
-('Health', 'health', 'Health and wellness news', '#10B981');
+('Health', 'health', 'Health and wellness news', '#10B981'),
+('Politics', 'politics', 'Political news and government updates', '#7C3AED'),
+('Other', 'other', 'Miscellaneous topics and general content', '#8B5CF6');
 
 -- Enable Row Level Security
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;

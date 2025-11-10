@@ -18,6 +18,18 @@ export async function POST(request: NextRequest) {
           slug: 'health',
           description: 'Health and wellness news',
           color: '#10B981'
+        },
+        {
+          name: 'Politics',
+          slug: 'politics', 
+          description: 'Political news and government updates',
+          color: '#7C3AED'
+        },
+        {
+          name: 'Other',
+          slug: 'other',
+          description: 'Miscellaneous topics and general content', 
+          color: '#8B5CF6'
         }
       ], {
         onConflict: 'slug',
