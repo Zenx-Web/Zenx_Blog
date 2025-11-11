@@ -134,13 +134,12 @@ export async function POST(request: NextRequest) {
     // Replace AI image placeholders with actual fetched images
     let contentWithImages = generatedBlog.content
     if ('fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0) {
+      console.log('🖼️ Starting image replacement for', generatedBlog.fetchedImages.length, 'images')
+      
       generatedBlog.fetchedImages.forEach((image, index) => {
-        // Replace placeholder divs with actual images
-        const placeholderPattern = new RegExp(
-          `<div[^>]*class="ai-image-placeholder"[^>]*data-placement="${image.placement}"[^>]*data-index="${index}"[^>]*>.*?</div>`,
-          'gs'
-        )
+        console.log(`Processing image ${index + 1}:`, image.placement)
         
+        // Create the image HTML to insert
         const imageHtml = `
 <figure class="blog-image" data-placement="${image.placement}" style="margin: 2rem 0;">
   <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
@@ -150,29 +149,55 @@ export async function POST(request: NextRequest) {
   </figcaption>
 </figure>`
         
-        contentWithImages = contentWithImages.replace(placeholderPattern, imageHtml)
-      })
-      
-      // Also replace generic placeholders without data-index
-      generatedBlog.fetchedImages.forEach((image, index) => {
-        const genericPattern = new RegExp(
-          `<div[^>]*class="ai-image-placeholder"[^>]*data-placement="${image.placement}"[^>]*>.*?</div>`,
-          's'
-        )
+        // Try multiple replacement strategies
+        let replaced = false
         
-        if (genericPattern.test(contentWithImages)) {
-          const imageHtml = `
-<figure class="blog-image" data-placement="${image.placement}" style="margin: 2rem 0;">
-  <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
-  <figcaption style="margin-top: 0.75rem; text-align: center; font-size: 0.9rem; color: #6b7280; font-style: italic;">
-    ${image.caption}
-    ${image.photographer ? ` <span style="font-size: 0.85rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` : ''}
-  </figcaption>
-</figure>`
-          
-          contentWithImages = contentWithImages.replace(genericPattern, imageHtml)
+        // Strategy 1: Replace by exact data-placement and data-index
+        const pattern1 = new RegExp(
+          `<div[^>]*class=["']ai-image-placeholder["'][^>]*data-placement=["']${image.placement}["'][^>]*data-index=["']${index}["'][^>]*>[\\s\\S]*?<\\/div>`,
+          'i'
+        )
+        if (pattern1.test(contentWithImages)) {
+          contentWithImages = contentWithImages.replace(pattern1, imageHtml)
+          replaced = true
+          console.log(`✅ Replaced image ${index + 1} using strategy 1`)
+        }
+        
+        // Strategy 2: Replace by data-placement only (for placeholders without index)
+        if (!replaced) {
+          const pattern2 = new RegExp(
+            `<div[^>]*class=["']ai-image-placeholder["'][^>]*data-placement=["']${image.placement}["'][^>]*>[\\s\\S]*?<\\/div>`,
+            'i'
+          )
+          if (pattern2.test(contentWithImages)) {
+            contentWithImages = contentWithImages.replace(pattern2, imageHtml)
+            replaced = true
+            console.log(`✅ Replaced image ${index + 1} using strategy 2`)
+          }
+        }
+        
+        // Strategy 3: Replace by placement name in text (fallback)
+        if (!replaced) {
+          const placementText = image.placement.replace(/_/g, ' ')
+          const pattern3 = new RegExp(
+            `Image will be inserted here[^<]*${placementText}[^<]*`,
+            'i'
+          )
+          if (pattern3.test(contentWithImages)) {
+            contentWithImages = contentWithImages.replace(pattern3, imageHtml)
+            replaced = true
+            console.log(`✅ Replaced image ${index + 1} using strategy 3 (text match)`)
+          }
+        }
+        
+        if (!replaced) {
+          console.warn(`⚠️ Could not find placeholder for image ${index + 1} (${image.placement})`)
         }
       })
+      
+      console.log('✅ Image replacement complete')
+    } else {
+      console.log('ℹ️ No fetched images to insert')
     }
 
     // Enhance content with ImZenx branding and AI disclosures

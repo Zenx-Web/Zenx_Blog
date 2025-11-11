@@ -290,13 +290,17 @@ General requirements:
 
 CRITICAL: EMBED IMAGES AND INTERACTIVE ELEMENTS IN THE CONTENT HTML:
 - When you suggest images in the JSON "images" array, you MUST also embed placeholder image tags in the HTML content at those exact placements
-- Use this format for images: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here: [Image Description]</p></div>
+- Use this EXACT format for image placeholders: <div class="ai-image-placeholder" data-placement="PLACEMENT_NAME" data-index="INDEX_NUMBER"><p class="image-caption">Image will be inserted here</p></div>
+- Replace PLACEMENT_NAME with: hero, after_introduction, in_section_2, or before_conclusion
+- Replace INDEX_NUMBER with: 0, 1, or 2 (matching the index in the images array)
+- Example for first image at hero: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here</p></div>
 - When you suggest interactive elements, you MUST embed them directly in the HTML content where they make sense
-- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li></ul></div>
-- For timelines: Use <div class="interactive-timeline" data-type="timeline"><ol><li><strong>[Time]</strong> - [Event]</li></ol></div>
-- For checklists: Use <div class="interactive-checklist" data-type="checklist"><ul class="checklist"><li>[ ] [Item]</li></ul></div>
-- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Title]</h4><p>[Content]</p></aside>
-- Interactive elements should be embedded naturally within the content flow, not listed separately
+- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li><li>[Option 3]</li><li>[Option 4]</li></ul></div>
+- For timelines: Use <div class="interactive-timeline" data-type="timeline"><h4>[Timeline Title]</h4><ol><li><strong>[Time/Date]</strong> - [Event description]</li></ol></div>
+- For checklists: Use <div class="interactive-checklist" data-type="checklist"><h4>[Checklist Title]</h4><ul class="checklist"><li>[ ] [Item 1]</li><li>[ ] [Item 2]</li></ul></div>
+- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Callout Title]</h4><p>[Important message or tip]</p></aside>
+- Place interactive elements naturally within the content flow where they add value
+- DO NOT just list them separately - integrate them into the narrative
 
 CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
 - Add author attribution at the top: "By ImZenx (AI-Assisted)"
@@ -411,13 +415,17 @@ General guidance:
 
 CRITICAL: EMBED IMAGES AND INTERACTIVE ELEMENTS IN THE CONTENT HTML:
 - When you suggest images in the JSON "images" array, you MUST also embed placeholder image tags in the HTML content at those exact placements
-- Use this format for images: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here: [Image Description]</p></div>
+- Use this EXACT format for image placeholders: <div class="ai-image-placeholder" data-placement="PLACEMENT_NAME" data-index="INDEX_NUMBER"><p class="image-caption">Image will be inserted here</p></div>
+- Replace PLACEMENT_NAME with: hero, after_introduction, in_section_2, or before_conclusion
+- Replace INDEX_NUMBER with: 0, 1, or 2 (matching the index in the images array)
+- Example for first image at hero: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here</p></div>
 - When you suggest interactive elements, you MUST embed them directly in the HTML content where they make sense
-- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li></ul></div>
-- For timelines: Use <div class="interactive-timeline" data-type="timeline"><ol><li><strong>[Time]</strong> - [Event]</li></ol></div>
-- For checklists: Use <div class="interactive-checklist" data-type="checklist"><ul class="checklist"><li>[ ] [Item]</li></ul></div>
-- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Title]</h4><p>[Content]</p></aside>
-- Interactive elements should be embedded naturally within the content flow, not listed separately
+- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li><li>[Option 3]</li><li>[Option 4]</li></ul></div>
+- For timelines: Use <div class="interactive-timeline" data-type="timeline"><h4>[Timeline Title]</h4><ol><li><strong>[Time/Date]</strong> - [Event description]</li></ol></div>
+- For checklists: Use <div class="interactive-checklist" data-type="checklist"><h4>[Checklist Title]</h4><ul class="checklist"><li>[ ] [Item 1]</li><li>[ ] [Item 2]</li></ul></div>
+- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Callout Title]</h4><p>[Important message or tip]</p></aside>
+- Place interactive elements naturally within the content flow where they add value
+- DO NOT just list them separately - integrate them into the narrative
 
 CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
 - Add author attribution at the top: "By ImZenx (AI-Assisted)"
