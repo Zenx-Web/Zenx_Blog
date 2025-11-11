@@ -32,7 +32,8 @@ const ARTICLE_SIDEBAR_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SIDEBAR_
 const ARTICLE_INLINE_AD_SLOT_PRIMARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_PRIMARY_SLOT ?? ''
 const ARTICLE_INLINE_AD_SLOT_SECONDARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_SECONDARY_SLOT ?? ''
 
-// Enable dynamic rendering to support preview mode
+// Force dynamic rendering for preview mode support
+export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
 type BlogPost = {
