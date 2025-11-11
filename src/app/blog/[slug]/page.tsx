@@ -194,7 +194,9 @@ function injectInlineAdsIntoHtml(html: string): string {
 
 async function getBlogPost(slug: string, preview: boolean = false): Promise<{ post: BlogPost; relatedPosts: RelatedPost[] } | null> {
   try {
-    console.log('📖 getBlogPost - slug:', slug, 'preview:', preview)
+    console.log('📖 getBlogPost called')
+    console.log('   - slug:', slug)
+    console.log('   - preview:', preview)
     
     // Build query with or without is_published check based on preview mode
     let query = supabase
@@ -210,9 +212,41 @@ async function getBlogPost(slug: string, preview: boolean = false): Promise<{ po
       console.log('🔓 Skipping is_published filter (preview mode)')
     }
     
+    console.log('🔍 Executing Supabase query...')
     const { data: post, error } = await query.single()
+    
+    console.log('📊 Query result:')
+    console.log('   - post found:', !!post)
+    console.log('   - error:', error?.message || 'none')
+    if (post) {
+      console.log('   - title:', post.title)
+      console.log('   - is_published:', post.is_published)
+    }
 
     if (error || !post) {
+      console.error('❌ No post found:', error)
+      
+      // Try without the trailing number if slug ends with -1, -2, etc.
+      if (slug.match(/-\d+$/)) {
+        const baseSlug = slug.replace(/-\d+$/, '')
+        console.log('🔄 Retrying with base slug:', baseSlug)
+        
+        let retryQuery = supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('slug', baseSlug)
+        
+        if (!preview) {
+          retryQuery = retryQuery.eq('is_published', true)
+        }
+        
+        const { data: retryPost } = await retryQuery.single()
+        if (retryPost) {
+          console.log('✅ Found with base slug!')
+          return getBlogPost(baseSlug, preview)
+        }
+      }
+      
       return null
     }
 
