@@ -195,6 +195,18 @@ export async function POST(request: NextRequest) {
           }
         }
         
+        // Strategy 4: Replace any "Image will be inserted here" text (very aggressive)
+        if (!replaced) {
+          const pattern4 = /(?:<p[^>]*>)?(?:<em>|<i>)?Image will be inserted here(?:<\/em>|<\/i>)?(?:<\/p>)?/i
+          if (pattern4.test(contentWithImages)) {
+            // Only replace the first occurrence to match this image
+            contentWithImages = contentWithImages.replace(pattern4, imageHtml)
+            replaced = true
+            placeholdersFound++
+            console.log(`✅ Replaced image ${index + 1} using strategy 4 (aggressive text match)`)
+          }
+        }
+        
         if (!replaced) {
           console.warn(`⚠️ Could not find placeholder for image ${index + 1} (${image.placement})`)
         }
