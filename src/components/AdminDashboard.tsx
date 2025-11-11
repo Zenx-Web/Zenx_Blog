@@ -39,6 +39,16 @@ interface GeneratedBlog {
   }>
 }
 
+interface FetchedImage {
+  url: string
+  downloadUrl: string
+  alt: string
+  photographer: string
+  photographerUrl: string
+  placement: string
+  caption: string
+}
+
 interface BlogPostRecord {
   id: string
   slug: string
@@ -106,6 +116,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBlog, setGeneratedBlog] = useState<GeneratedBlog | null>(null)
+  const [fetchedImages, setFetchedImages] = useState<FetchedImage[]>([])
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null)
   const [loading, setLoading] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -139,6 +150,14 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     show: boolean
   }>({ type: 'info', message: '', show: false })
 
+  // AI Layout setting
+  const [useAILayout, setUseAILayout] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ai-layout-enabled') === 'true'
+    }
+    return false
+  })
+
   // Form state for blog generation
   const [category, setCategory] = useState('technology')
   const [tone, setTone] = useState('engaging')
@@ -162,6 +181,11 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [isPublishingManual, setIsPublishingManual] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  
+  // Image editing state
+  const [editingImagePostId, setEditingImagePostId] = useState<string | null>(null)
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [isUpdatingImage, setIsUpdatingImage] = useState(false)
   
   // Simple search state for existing topics
   const [searchTerm, setSearchTerm] = useState('')
@@ -231,6 +255,16 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       setNotification(prev => ({ ...prev, show: false }))
     }, 5000)
   }, [])
+
+  // Toggle AI Layout setting
+  const toggleAILayout = useCallback(() => {
+    const newValue = !useAILayout
+    setUseAILayout(newValue)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ai-layout-enabled', String(newValue))
+    }
+    showNotification('info', newValue ? 'AI-powered layouts enabled' : 'AI-powered layouts disabled')
+  }, [useAILayout, showNotification])
 
   const notifySubscribers = useCallback(async (postId: string) => {
     try {
@@ -745,6 +779,43 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }
   }
 
+  const handleUpdatePostImage = async (postId: string) => {
+    if (!postId || !newImageUrl.trim()) {
+      showNotification('error', 'Please provide a valid image URL')
+      return
+    }
+
+    setIsUpdatingImage(true)
+    try {
+      const response = await fetch('/api/admin/posts/update-image', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId,
+          featuredImage: newImageUrl.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update image')
+      }
+
+      showNotification('success', 'Image updated successfully!')
+      setEditingImagePostId(null)
+      setNewImageUrl('')
+      void fetchManagedPosts()
+    } catch (error) {
+      console.error('Error updating image:', error)
+      showNotification('error', error instanceof Error ? error.message : 'Failed to update image')
+    } finally {
+      setIsUpdatingImage(false)
+    }
+  }
+
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
@@ -1037,6 +1108,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       
       if (data.success) {
         setGeneratedBlog(data.generatedContent)
+        setFetchedImages(data.fetchedImages || [])
         if (data.blogPost) {
           setSavedPost(mapPostRecord(data.blogPost))
         }
@@ -1591,6 +1663,15 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
                       >
                         View
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingImagePostId(post.id)
+                          setNewImageUrl(post.featured_image || '')
+                        }}
+                        className="px-4 py-2 rounded-lg text-sm font-medium border border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        Edit Image
                       </button>
                       <button
                         onClick={() => handleDeletePost(post.id)}
@@ -2240,6 +2321,17 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                       🚀 SEO Optimization
                     </span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAILayout}
+                      onChange={toggleAILayout}
+                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      ✨ AI Custom Layouts
+                    </span>
+                  </label>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
                   <div className="text-sm text-gray-500 text-center sm:text-left">
@@ -2442,10 +2534,65 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   </div>
                 </div>
 
-                {/* Enhanced Images Section */}
-                {generatedBlog.images && generatedBlog.images.length > 0 && (
+                {/* Enhanced Images Section - Show Fetched Images with Picker */}
+                {fetchedImages.length > 0 && (
                   <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
-                    <h3 className="font-bold text-gray-900 mb-3">🖼️ Suggested Images ({generatedBlog.images.length})</h3>
+                    <h3 className="font-bold text-gray-900 mb-3">🖼️ Fetched Images ({fetchedImages.length})</h3>
+                    <p className="text-sm text-gray-600 mb-4">Images fetched from Pexels/Unsplash. Click to set as featured image.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {fetchedImages.map((image, index) => (
+                        <div key={index} className="bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-shadow">
+                          <div className="relative h-48 bg-gray-100">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img 
+                              src={image.url} 
+                              alt={image.alt}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="p-3">
+                            <p className="text-xs font-medium text-gray-800 mb-1">📍 {image.placement.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-gray-600 mb-2 line-clamp-2">{image.caption}</p>
+                            <p className="text-xs text-gray-500 mb-3">
+                              Photo by <a href={image.photographerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{image.photographer}</a>
+                            </p>
+                            <button
+                              onClick={() => {
+                                if (savedPost?.id) {
+                                  // Update the featured image in the saved post
+                                  fetch('/api/admin/posts', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      id: savedPost.id,
+                                      featured_image: image.url
+                                    })
+                                  }).then(() => {
+                                    setSavedPost(prev => prev ? {...prev, featured_image: image.url} : null)
+                                    showNotification('success', `Image ${index + 1} set as featured image!`)
+                                  }).catch(err => {
+                                    showNotification('error', 'Failed to update featured image')
+                                  })
+                                } else {
+                                  showNotification('info', 'Please save the post first before selecting an image')
+                                }
+                              }}
+                              className="w-full px-3 py-2 bg-pink-600 text-white text-xs font-medium rounded hover:bg-pink-700 transition-colors"
+                            >
+                              {savedPost?.featured_image === image.url ? '✓ Featured' : 'Set as Featured'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Image Suggestions Section - Show AI descriptions */}
+                {generatedBlog.images && generatedBlog.images.length > 0 && fetchedImages.length === 0 && (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <h3 className="font-bold text-gray-900 mb-3">� Image Suggestions ({generatedBlog.images.length})</h3>
+                    <p className="text-sm text-gray-600 mb-3">AI-generated image suggestions (no images fetched). Enable "Include Images" to fetch actual images.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {generatedBlog.images.map((image, index) => (
                         <div key={index} className="bg-white p-3 rounded-lg border">
@@ -2856,6 +3003,115 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
         )}
       </div>
-    </div>
+
+      {/* Edit Image Modal */}
+      {editingImagePostId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Edit Featured Image</h3>
+            
+            {/* Current Image Preview */}
+            {newImageUrl && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">Current Image:</p>
+                <img 
+                  src={newImageUrl} 
+                  alt="Current featured" 
+                  className="w-full h-64 object-cover rounded-lg border border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800'
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Image URL Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Image URL
+              </label>
+              <input
+                type="url"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Paste a direct image URL (jpg, png, webp, etc.)
+              </p>
+            </div>
+
+            {/* Image Upload Option */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Or Upload New Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setIsUploadingImage(true)
+                    try {
+                      const formData = new FormData()
+                      formData.append('file', file)
+
+                      const response = await fetch('/api/admin/upload-image', {
+                        method: 'POST',
+                        body: formData,
+                      })
+
+                      const data = await response.json()
+
+                      if (!response.ok) {
+                        throw new Error(data.error || 'Upload failed')
+                      }
+
+                      setNewImageUrl(data.url)
+                      showNotification('success', 'Image uploaded successfully!')
+                    } catch (error) {
+                      console.error('Upload error:', error)
+                      showNotification('error', error instanceof Error ? error.message : 'Upload failed')
+                    } finally {
+                      setIsUploadingImage(false)
+                    }
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditingImagePostId(null)
+                  setNewImageUrl('')
+                }}
+                disabled={isUpdatingImage}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleUpdatePostImage(editingImagePostId)}
+                disabled={isUpdatingImage || !newImageUrl.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isUpdatingImage ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Updating...
+                  </>
+                ) : (
+                  'Update Image'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}    </div>
   )
 }

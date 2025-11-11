@@ -11,6 +11,7 @@ import NewsletterSubscribe from '@/components/NewsletterSubscribe'
 import AdSlot from '@/components/AdSlot'
 import SavePostButton from '@/components/SavePostButton'
 import { getCategoryColor } from '@/lib/category-utils'
+import type { CustomLayout } from '@/lib/content-analyzer'
 
 interface TemplateMinimalProps {
   post: any
@@ -27,6 +28,7 @@ interface TemplateMinimalProps {
     mid: string
     footer: string
   }
+  customLayout?: CustomLayout
 }
 
 export default function TemplateMinimal({
@@ -38,8 +40,11 @@ export default function TemplateMinimal({
   processedHtml,
   isHtmlContent,
   adsenseClientId,
-  adSlots
+  adSlots,
+  customLayout
 }: TemplateMinimalProps) {
+  const showTOC = customLayout?.components.showTOC ?? (headings.length > 0)
+  const showSidebar = customLayout?.components.showSidebar ?? true
   return (
     <div className="min-h-screen bg-white">
       {/* Minimal Header */}

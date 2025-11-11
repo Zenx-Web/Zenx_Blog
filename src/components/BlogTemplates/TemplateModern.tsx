@@ -11,6 +11,7 @@ import NewsletterSubscribe from '@/components/NewsletterSubscribe'
 import AdSlot from '@/components/AdSlot'
 import SavePostButton from '@/components/SavePostButton'
 import { getCategoryColor } from '@/lib/category-utils'
+import type { CustomLayout } from '@/lib/content-analyzer'
 
 interface TemplateModernProps {
   post: any
@@ -27,6 +28,7 @@ interface TemplateModernProps {
     mid: string
     footer: string
   }
+  customLayout?: CustomLayout // Optional AI-generated layout configuration
 }
 
 export default function TemplateModern({
@@ -38,8 +40,30 @@ export default function TemplateModern({
   processedHtml,
   isHtmlContent,
   adsenseClientId,
-  adSlots
+  adSlots,
+  customLayout
 }: TemplateModernProps) {
+  // Use custom layout settings if available, otherwise use defaults
+  const showTOC = customLayout?.components.showTOC ?? (headings.length > 0)
+  const showSidebar = customLayout?.components.showSidebar ?? true
+  const spacing = customLayout?.styling.spacing ?? 'normal'
+  const colorScheme = customLayout?.styling.colorScheme ?? 'blue'
+  
+  // Dynamic spacing classes based on AI analysis
+  const spacingClasses = {
+    tight: 'space-y-4',
+    normal: 'space-y-6', 
+    loose: 'space-y-8'
+  }[spacing]
+
+  // Color scheme mapping
+  const colorClasses = {
+    blue: 'from-blue-600 to-blue-800',
+    green: 'from-green-600 to-green-800',
+    purple: 'from-purple-600 to-purple-800',
+    orange: 'from-orange-600 to-orange-800',
+    neutral: 'from-gray-600 to-gray-800'
+  }[colorScheme]
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* Modern Full-Width Hero */}
@@ -90,7 +114,7 @@ export default function TemplateModern({
 
         {/* No Image Fallback */}
         {!post.featured_image && (
-          <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 py-24">
+          <div className={`bg-gradient-to-br ${colorClasses} py-24`}>
             <div className="mx-auto max-w-5xl px-4">
               <span className={`inline-block rounded-full px-4 py-2 text-sm font-bold bg-white/20 text-white shadow-lg`}>
                 {post.category}
@@ -123,12 +147,12 @@ export default function TemplateModern({
       </div>
 
       {/* Content Container */}
-      <div className="mx-auto max-w-5xl px-4 py-12">
+      <div className={`mx-auto max-w-5xl px-4 py-12 ${spacingClasses}`}>
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
           {/* Main Content */}
-          <article className="lg:col-span-8">
+          <article className={showSidebar ? "lg:col-span-8" : "lg:col-span-12"}>
             {/* Table of Contents - Mobile */}
-            {headings.length > 0 && (
+            {showTOC && headings.length > 0 && (
               <div className="mb-8 rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 lg:hidden">
                 <h3 className="mb-4 text-lg font-bold text-gray-900">Jump to Section</h3>
                 <TableOfContents headings={headings} />
@@ -179,17 +203,18 @@ export default function TemplateModern({
           </article>
 
           {/* Sidebar */}
-          <aside className="lg:col-span-4">
-            <div className="sticky top-24 space-y-8">
-              {/* TOC - Desktop */}
-              {headings.length > 0 && (
-                <div className="hidden rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 lg:block">
-                  <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900">
-                    Quick Navigation
-                  </h3>
-                  <TableOfContents headings={headings} />
-                </div>
-              )}
+          {showSidebar && (
+            <aside className="lg:col-span-4">
+              <div className="sticky top-24 space-y-8">
+                {/* TOC - Desktop */}
+                {showTOC && headings.length > 0 && (
+                  <div className="hidden rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 lg:block">
+                    <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900">
+                      Quick Navigation
+                    </h3>
+                    <TableOfContents headings={headings} />
+                  </div>
+                )}
 
               {/* Ad Space */}
               {adsenseClientId && adSlots.sidebar && (
@@ -225,6 +250,7 @@ export default function TemplateModern({
               )}
             </div>
           </aside>
+          )}
         </div>
       </div>
     </div>

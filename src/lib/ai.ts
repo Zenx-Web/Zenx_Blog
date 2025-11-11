@@ -288,6 +288,16 @@ General requirements:
 - Conclude with a distinctive takeaway tied to what readers should do or watch next.
 - Avoid generic filler, self-referential AI language, or motivational clichés.
 
+CRITICAL: EMBED IMAGES AND INTERACTIVE ELEMENTS IN THE CONTENT HTML:
+- When you suggest images in the JSON "images" array, you MUST also embed placeholder image tags in the HTML content at those exact placements
+- Use this format for images: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here: [Image Description]</p></div>
+- When you suggest interactive elements, you MUST embed them directly in the HTML content where they make sense
+- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li></ul></div>
+- For timelines: Use <div class="interactive-timeline" data-type="timeline"><ol><li><strong>[Time]</strong> - [Event]</li></ol></div>
+- For checklists: Use <div class="interactive-checklist" data-type="checklist"><ul class="checklist"><li>[ ] [Item]</li></ul></div>
+- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Title]</h4><p>[Content]</p></aside>
+- Interactive elements should be embedded naturally within the content flow, not listed separately
+
 CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
 - Add author attribution at the top: "By ImZenx (AI-Assisted)"
 - Include an "AI Summary" section with 3 bullet points at the very beginning
@@ -398,6 +408,16 @@ General guidance:
 - Suggest interactiveElements that suit a ${format} experience (timeline, checklist, poll, quiz, callout, table, etc.).
 - Close with a reader-centric takeaway or next-step prompt.
 - Never mention that you are an AI.
+
+CRITICAL: EMBED IMAGES AND INTERACTIVE ELEMENTS IN THE CONTENT HTML:
+- When you suggest images in the JSON "images" array, you MUST also embed placeholder image tags in the HTML content at those exact placements
+- Use this format for images: <div class="ai-image-placeholder" data-placement="hero" data-index="0"><p class="image-caption">Image will be inserted here: [Image Description]</p></div>
+- When you suggest interactive elements, you MUST embed them directly in the HTML content where they make sense
+- For polls: Use <div class="interactive-poll" data-type="poll"><h4>[Poll Title]</h4><ul><li>[Option 1]</li><li>[Option 2]</li></ul></div>
+- For timelines: Use <div class="interactive-timeline" data-type="timeline"><ol><li><strong>[Time]</strong> - [Event]</li></ol></div>
+- For checklists: Use <div class="interactive-checklist" data-type="checklist"><ul class="checklist"><li>[ ] [Item]</li></ul></div>
+- For callouts: Use <aside class="interactive-callout" data-type="callout"><h4>[Title]</h4><p>[Content]</p></aside>
+- Interactive elements should be embedded naturally within the content flow, not listed separately
 
 CRITICAL BRANDING & EDITORIAL REQUIREMENTS:
 - Add author attribution at the top: "By ImZenx (AI-Assisted)"
@@ -595,6 +615,8 @@ export async function generateEnhancedBlogContent(options: BlogGenerationOptions
     alt: string
     photographer: string
     photographerUrl: string
+    placement: string
+    caption: string
   }>
 }> {
   try {

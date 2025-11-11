@@ -119,11 +119,68 @@ export async function POST(request: NextRequest) {
         ? generatedBlog.fetchedImages[0].url 
         : null
 
+    // Prepare images for content enhancement (all fetched images)
+    const contentImages = 
+      'fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0
+        ? generatedBlog.fetchedImages.map(img => ({
+            url: img.url,
+            alt: img.alt,
+            caption: img.caption || img.alt,
+            photographer: img.photographer,
+            photographerUrl: img.photographerUrl
+          }))
+        : undefined
+
+    // Replace AI image placeholders with actual fetched images
+    let contentWithImages = generatedBlog.content
+    if ('fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0) {
+      generatedBlog.fetchedImages.forEach((image, index) => {
+        // Replace placeholder divs with actual images
+        const placeholderPattern = new RegExp(
+          `<div[^>]*class="ai-image-placeholder"[^>]*data-placement="${image.placement}"[^>]*data-index="${index}"[^>]*>.*?</div>`,
+          'gs'
+        )
+        
+        const imageHtml = `
+<figure class="blog-image" data-placement="${image.placement}" style="margin: 2rem 0;">
+  <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+  <figcaption style="margin-top: 0.75rem; text-align: center; font-size: 0.9rem; color: #6b7280; font-style: italic;">
+    ${image.caption}
+    ${image.photographer ? ` <span style="font-size: 0.85rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` : ''}
+  </figcaption>
+</figure>`
+        
+        contentWithImages = contentWithImages.replace(placeholderPattern, imageHtml)
+      })
+      
+      // Also replace generic placeholders without data-index
+      generatedBlog.fetchedImages.forEach((image, index) => {
+        const genericPattern = new RegExp(
+          `<div[^>]*class="ai-image-placeholder"[^>]*data-placement="${image.placement}"[^>]*>.*?</div>`,
+          's'
+        )
+        
+        if (genericPattern.test(contentWithImages)) {
+          const imageHtml = `
+<figure class="blog-image" data-placement="${image.placement}" style="margin: 2rem 0;">
+  <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+  <figcaption style="margin-top: 0.75rem; text-align: center; font-size: 0.9rem; color: #6b7280; font-style: italic;">
+    ${image.caption}
+    ${image.photographer ? ` <span style="font-size: 0.85rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` : ''}
+  </figcaption>
+</figure>`
+          
+          contentWithImages = contentWithImages.replace(genericPattern, imageHtml)
+        }
+      })
+    }
+
     // Enhance content with ImZenx branding and AI disclosures
-    const enhancedContent = processContentForPublication(generatedBlog.content, {
+    const enhancedContent = processContentForPublication(contentWithImages, {
       aiSummary: generatedBlog.aiSummary,
       editorsNote: generatedBlog.editorsNote,
       keyTakeaways: generatedBlog.keyTakeaways,
+      images: contentImages, // Pass all fetched images for Image Suggestions section
       forceRebrand: false
     })
 
@@ -179,6 +236,7 @@ export async function POST(request: NextRequest) {
       success: true,
       blogPost,
       generatedContent: generatedBlog,
+      fetchedImages: 'fetchedImages' in generatedBlog ? generatedBlog.fetchedImages : undefined,
       message: 'Blog post generated and saved successfully!'
     })
   } catch (error) {

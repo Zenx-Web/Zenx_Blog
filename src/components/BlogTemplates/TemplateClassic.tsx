@@ -11,6 +11,7 @@ import NewsletterSubscribe from '@/components/NewsletterSubscribe'
 import AdSlot from '@/components/AdSlot'
 import SavePostButton from '@/components/SavePostButton'
 import { getCategoryColor } from '@/lib/category-utils'
+import type { CustomLayout } from '@/lib/content-analyzer'
 
 interface TemplateClassicProps {
   post: any
@@ -27,6 +28,7 @@ interface TemplateClassicProps {
     mid: string
     footer: string
   }
+  customLayout?: CustomLayout
 }
 
 export default function TemplateClassic({
@@ -38,8 +40,12 @@ export default function TemplateClassic({
   processedHtml,
   isHtmlContent,
   adsenseClientId,
-  adSlots
+  adSlots,
+  customLayout
 }: TemplateClassicProps) {
+  // Use custom layout settings if available
+  const showTOC = customLayout?.components.showTOC ?? (headings.length > 0)
+  const showSidebar = customLayout?.components.showSidebar ?? true
   return (
     <div className="bg-white">
       {/* Classic Hero Section */}
@@ -94,21 +100,23 @@ export default function TemplateClassic({
       <div className="mx-auto max-w-7xl px-4 py-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Table of Contents - Sticky Sidebar */}
-          <aside className="hidden lg:col-span-3 lg:block">
-            <div className="sticky top-24">
-              {headings.length > 0 && (
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
-                  <h3 className="mb-4 text-sm font-bold text-gray-900 uppercase tracking-wide">
-                    Table of Contents
-                  </h3>
-                  <TableOfContents headings={headings} />
-                </div>
-              )}
-            </div>
-          </aside>
+          {showTOC && (
+            <aside className="hidden lg:col-span-3 lg:block">
+              <div className="sticky top-24">
+                {headings.length > 0 && (
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                    <h3 className="mb-4 text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Table of Contents
+                    </h3>
+                    <TableOfContents headings={headings} />
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
 
           {/* Main Article */}
-          <article className="lg:col-span-6">
+          <article className={showTOC && showSidebar ? "lg:col-span-6" : showTOC || showSidebar ? "lg:col-span-9" : "lg:col-span-12"}>
             <div className="prose prose-lg max-w-none">
               {isHtmlContent ? (
                 <div
@@ -152,42 +160,44 @@ export default function TemplateClassic({
           </article>
 
           {/* Right Sidebar - Ads & Related */}
-          <aside className="lg:col-span-3">
-            <div className="sticky top-24 space-y-8">
-              {/* Ad Space */}
-              {adsenseClientId && adSlots.sidebar && (
-                <div className="rounded-2xl border border-gray-200 p-4">
-                  <p className="mb-2 text-center text-xs text-gray-500">Advertisement</p>
-                  <AdSlot
-                    slotId={adSlots.sidebar}
-                    format="auto"
-                    responsive
-                  />
-                </div>
-              )}
-
-              {/* Related Posts */}
-              {relatedPosts.length > 0 && (
-                <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                  <h3 className="mb-4 text-lg font-bold text-gray-900">Related Articles</h3>
-                  <div className="space-y-4">
-                    {relatedPosts.slice(0, 3).map((related) => (
-                      <Link
-                        key={related.id}
-                        href={`/blog/${related.slug}`}
-                        className="group block"
-                      >
-                        <h4 className="font-semibold text-gray-900 group-hover:text-blue-600">
-                          {related.title}
-                        </h4>
-                        <p className="mt-1 text-sm text-gray-600">{related.read_time} min read</p>
-                      </Link>
-                    ))}
+          {showSidebar && (
+            <aside className="lg:col-span-3">
+              <div className="sticky top-24 space-y-8">
+                {/* Ad Space */}
+                {adsenseClientId && adSlots.sidebar && (
+                  <div className="rounded-2xl border border-gray-200 p-4">
+                    <p className="mb-2 text-center text-xs text-gray-500">Advertisement</p>
+                    <AdSlot
+                      slotId={adSlots.sidebar}
+                      format="auto"
+                      responsive
+                    />
                   </div>
-                </div>
-              )}
-            </div>
-          </aside>
+                )}
+
+                {/* Related Posts */}
+                {relatedPosts.length > 0 && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                    <h3 className="mb-4 text-lg font-bold text-gray-900">Related Articles</h3>
+                    <div className="space-y-4">
+                      {relatedPosts.slice(0, 3).map((related) => (
+                        <Link
+                          key={related.id}
+                          href={`/blog/${related.slug}`}
+                          className="group block"
+                        >
+                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-600">
+                            {related.title}
+                          </h4>
+                          <p className="mt-1 text-sm text-gray-600">{related.read_time} min read</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </div>

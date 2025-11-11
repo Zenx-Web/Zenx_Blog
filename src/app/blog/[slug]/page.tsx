@@ -518,6 +518,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           mid: ARTICLE_MID_AD_SLOT,
           footer: ARTICLE_FOOTER_AD_SLOT
         }}
+        useAILayout={true} // Enable AI-powered custom layouts
       />
     </div>
   )

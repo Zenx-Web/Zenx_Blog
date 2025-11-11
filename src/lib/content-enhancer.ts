@@ -7,6 +7,13 @@ export interface EnhancedContent {
   aiSummary?: string[]
   editorsNote?: string
   keyTakeaways?: string[]
+  images?: Array<{
+    url: string
+    alt: string
+    caption: string
+    photographer?: string
+    photographerUrl?: string
+  }>
 }
 
 /**
@@ -19,9 +26,16 @@ export function enhanceContentWithBranding(
     editorsNote?: string
     keyTakeaways?: string[]
     skipDisclosure?: boolean
+    images?: Array<{
+      url: string
+      alt: string
+      caption: string
+      photographer?: string
+      photographerUrl?: string
+    }>
   }
 ): string {
-  const { aiSummary, editorsNote, keyTakeaways, skipDisclosure } = options || {}
+  const { aiSummary, editorsNote, keyTakeaways, skipDisclosure, images } = options || {}
 
   let enhancedContent = ''
 
@@ -56,6 +70,31 @@ ${aiSummary.map(point => `    <li>${point}</li>`).join('\n')}
   <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.125rem; color: #92400e;">✏️ Editor's Note</h3>
   <p style="margin: 0; line-height: 1.8; color: #451a03;">${editorsNote}</p>
 </aside>
+`
+  }
+
+  // Add Image Suggestions section if images are provided
+  if (images && images.length > 0) {
+    enhancedContent += `
+<div class="image-suggestions" style="margin-top: 3rem; margin-bottom: 3rem;">
+  <h2 style="margin-top: 0; margin-bottom: 2rem; font-size: 1.75rem; color: #1f2937; font-weight: 700;">Image Suggestions</h2>
+`
+    
+    images.forEach(image => {
+      enhancedContent += `
+  <div style="margin-bottom: 2rem;">
+    <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.75rem;" />
+    <p style="margin: 0; font-style: italic; color: #6b7280; font-size: 0.95rem; text-align: center;">
+      ${image.caption}${image.photographer && image.photographerUrl ? 
+        ` <span style="font-size: 0.875rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` 
+        : ''}
+    </p>
+  </div>
+`
+    })
+
+    enhancedContent += `
+</div>
 `
   }
 
@@ -203,9 +242,16 @@ export function processContentForPublication(
     editorsNote?: string
     keyTakeaways?: string[]
     forceRebrand?: boolean
+    images?: Array<{
+      url: string
+      alt: string
+      caption: string
+      photographer?: string
+      photographerUrl?: string
+    }>
   }
 ): string {
-  const { aiSummary, editorsNote, keyTakeaways, forceRebrand } = options || {}
+  const { aiSummary, editorsNote, keyTakeaways, forceRebrand, images } = options || {}
 
   // If already branded and not forcing rebrand, return as-is
   if (!forceRebrand && hasImZenxBranding(content)) {
@@ -219,6 +265,7 @@ export function processContentForPublication(
   return enhanceContentWithBranding(cleanContent, {
     aiSummary,
     editorsNote,
-    keyTakeaways
+    keyTakeaways,
+    images
   })
 }
