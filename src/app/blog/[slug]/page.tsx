@@ -188,14 +188,20 @@ function injectInlineAdsIntoHtml(html: string): string {
   return $.root().html() ?? html
 }
 
-async function getBlogPost(slug: string): Promise<{ post: BlogPost; relatedPosts: RelatedPost[] } | null> {
+async function getBlogPost(slug: string, preview: boolean = false): Promise<{ post: BlogPost; relatedPosts: RelatedPost[] } | null> {
   try {
-    const { data: post, error } = await supabase
+    // Build query with or without is_published check based on preview mode
+    let query = supabase
       .from('blog_posts')
       .select('*')
       .eq('slug', slug)
-      .eq('is_published', true)
-      .single()
+    
+    // Only filter by is_published if NOT in preview mode
+    if (!preview) {
+      query = query.eq('is_published', true)
+    }
+    
+    const { data: post, error } = await query.single()
 
     if (error || !post) {
       return null
@@ -283,15 +289,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+export default async function BlogPost({ 
+  params,
+  searchParams 
+}: { 
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ preview?: string }>
+}) {
   const { slug } = await params
+  const { preview } = await searchParams
+  const isPreview = preview === 'true'
+  
   const headersList = await headers()
   const protocol = headersList.get('x-forwarded-proto') ?? 'http'
   const host = headersList.get('x-forwarded-host') ?? headersList.get('host') ?? 'localhost:3000'
   const configuredBase = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
   const baseUrl = (configuredBase || `${protocol}://${host}`).replace(/\/$/, '')
 
-  const data = await getBlogPost(slug)
+  const data = await getBlogPost(slug, isPreview)
   
   if (!data) {
     notFound()

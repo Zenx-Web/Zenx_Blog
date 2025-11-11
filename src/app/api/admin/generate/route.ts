@@ -135,11 +135,15 @@ export async function POST(request: NextRequest) {
     let contentWithImages = generatedBlog.content
     if ('fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0) {
       console.log('🖼️ Starting image replacement for', generatedBlog.fetchedImages.length, 'images')
+      console.log('📄 Content preview (first 500 chars):', contentWithImages.substring(0, 500))
+      console.log('🔍 Looking for placeholders with class "ai-image-placeholder"...')
+      const placeholderMatches = contentWithImages.match(/<div[^>]*class=["'][^"']*ai-image-placeholder[^"']*["'][^>]*>/gi)
+      console.log('Found placeholders:', placeholderMatches ? placeholderMatches.length : 0, placeholderMatches)
       
       let placeholdersFound = 0
       
       generatedBlog.fetchedImages.forEach((image, index) => {
-        console.log(`Processing image ${index + 1}:`, image.placement)
+        console.log(`\n📍 Processing image ${index + 1}:`, image.placement)
         
         // Create the image HTML to insert
         const imageHtml = `
@@ -159,11 +163,14 @@ export async function POST(request: NextRequest) {
           `<div[^>]*class=["']ai-image-placeholder["'][^>]*data-placement=["']${image.placement}["'][^>]*data-index=["']${index}["'][^>]*>[\\s\\S]*?<\\/div>`,
           'i'
         )
+        console.log(`  🎯 Strategy 1 pattern:`, pattern1.source)
         if (pattern1.test(contentWithImages)) {
           contentWithImages = contentWithImages.replace(pattern1, imageHtml)
           replaced = true
           placeholdersFound++
-          console.log(`✅ Replaced image ${index + 1} using strategy 1`)
+          console.log(`  ✅ Replaced image ${index + 1} using strategy 1`)
+        } else {
+          console.log(`  ❌ Strategy 1 failed - no match`)
         }
         
         // Strategy 2: Replace by data-placement only (for placeholders without index)
@@ -172,11 +179,14 @@ export async function POST(request: NextRequest) {
             `<div[^>]*class=["']ai-image-placeholder["'][^>]*data-placement=["']${image.placement}["'][^>]*>[\\s\\S]*?<\\/div>`,
             'i'
           )
+          console.log(`  🎯 Strategy 2 pattern:`, pattern2.source)
           if (pattern2.test(contentWithImages)) {
             contentWithImages = contentWithImages.replace(pattern2, imageHtml)
             replaced = true
             placeholdersFound++
-            console.log(`✅ Replaced image ${index + 1} using strategy 2`)
+            console.log(`  ✅ Replaced image ${index + 1} using strategy 2`)
+          } else {
+            console.log(`  ❌ Strategy 2 failed - no match`)
           }
         }
         

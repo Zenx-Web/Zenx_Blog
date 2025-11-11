@@ -1659,7 +1659,10 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                             : 'Publish'}
                       </button>
                       <button
-                        onClick={() => window.open(`/blog/${post.slug}`, '_blank', 'noopener,noreferrer')}
+                        onClick={() => {
+                          const previewParam = post.is_published ? '' : '?preview=true'
+                          window.open(`/blog/${post.slug}${previewParam}`, '_blank', 'noopener,noreferrer')
+                        }}
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
                       >
                         View
@@ -2680,8 +2683,9 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   </button>
                   <button 
                     onClick={() => {
-                      if (savedPost?.slug && savedPost.is_published) {
-                        window.open(`/blog/${savedPost.slug}`, '_blank')
+                      if (savedPost?.slug) {
+                        const previewParam = savedPost.is_published ? '' : '?preview=true'
+                        window.open(`/blog/${savedPost.slug}${previewParam}`, '_blank')
                         return
                       }
 
