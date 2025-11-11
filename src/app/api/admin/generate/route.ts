@@ -136,6 +136,8 @@ export async function POST(request: NextRequest) {
     if ('fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0) {
       console.log('🖼️ Starting image replacement for', generatedBlog.fetchedImages.length, 'images')
       
+      let placeholdersFound = 0
+      
       generatedBlog.fetchedImages.forEach((image, index) => {
         console.log(`Processing image ${index + 1}:`, image.placement)
         
@@ -160,6 +162,7 @@ export async function POST(request: NextRequest) {
         if (pattern1.test(contentWithImages)) {
           contentWithImages = contentWithImages.replace(pattern1, imageHtml)
           replaced = true
+          placeholdersFound++
           console.log(`✅ Replaced image ${index + 1} using strategy 1`)
         }
         
@@ -172,6 +175,7 @@ export async function POST(request: NextRequest) {
           if (pattern2.test(contentWithImages)) {
             contentWithImages = contentWithImages.replace(pattern2, imageHtml)
             replaced = true
+            placeholdersFound++
             console.log(`✅ Replaced image ${index + 1} using strategy 2`)
           }
         }
@@ -186,6 +190,7 @@ export async function POST(request: NextRequest) {
           if (pattern3.test(contentWithImages)) {
             contentWithImages = contentWithImages.replace(pattern3, imageHtml)
             replaced = true
+            placeholdersFound++
             console.log(`✅ Replaced image ${index + 1} using strategy 3 (text match)`)
           }
         }
@@ -194,6 +199,83 @@ export async function POST(request: NextRequest) {
           console.warn(`⚠️ Could not find placeholder for image ${index + 1} (${image.placement})`)
         }
       })
+      
+      // If no placeholders were found, insert images at strategic positions
+      if (placeholdersFound === 0) {
+        console.log('⚠️ No placeholders found! Inserting images at strategic positions...')
+        
+        // Split content into sections
+        const h2Pattern = /<h2[^>]*>.*?<\/h2>/gi
+        const sections = contentWithImages.split(h2Pattern)
+        const headings = contentWithImages.match(h2Pattern) || []
+        
+        if (sections.length > 1) {
+          // Insert images between sections
+          let rebuiltContent = sections[0] // Start with intro
+          
+          generatedBlog.fetchedImages.forEach((image, index) => {
+            const imageHtml = `
+<figure class="blog-image embedded-image" style="margin: 2.5rem 0;">
+  <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+  <figcaption style="margin-top: 0.75rem; text-align: center; font-size: 0.9rem; color: #6b7280; font-style: italic;">
+    ${image.caption}
+    ${image.photographer ? ` <span style="font-size: 0.85rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` : ''}
+  </figcaption>
+</figure>
+`
+            
+            // Determine where to insert based on placement or index
+            let sectionIndex = index + 1
+            if (image.placement === 'hero' || image.placement === 'after_introduction') {
+              sectionIndex = 1 // After first section
+            } else if (image.placement === 'in_section_2') {
+              sectionIndex = 2 // After second section
+            } else if (image.placement === 'before_conclusion') {
+              sectionIndex = Math.max(sections.length - 2, 2) // Near end
+            }
+            
+            // Add section content and image
+            if (headings[sectionIndex - 1] && sections[sectionIndex]) {
+              rebuiltContent += headings[sectionIndex - 1]
+              rebuiltContent += sections[sectionIndex]
+              rebuiltContent += imageHtml
+              console.log(`✅ Inserted image ${index + 1} after section ${sectionIndex}`)
+            }
+          })
+          
+          // Add remaining sections
+          for (let i = generatedBlog.fetchedImages.length + 1; i < sections.length; i++) {
+            if (headings[i - 1]) rebuiltContent += headings[i - 1]
+            if (sections[i]) rebuiltContent += sections[i]
+          }
+          
+          contentWithImages = rebuiltContent
+          console.log('✅ Images inserted at strategic positions')
+        } else {
+          // Fallback: insert images after paragraphs
+          const paragraphs = contentWithImages.split('</p>')
+          if (paragraphs.length > 3) {
+            generatedBlog.fetchedImages.forEach((image, index) => {
+              const imageHtml = `
+<figure class="blog-image embedded-image" style="margin: 2.5rem 0;">
+  <img src="${image.url}" alt="${image.alt}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+  <figcaption style="margin-top: 0.75rem; text-align: center; font-size: 0.9rem; color: #6b7280; font-style: italic;">
+    ${image.caption}
+    ${image.photographer ? ` <span style="font-size: 0.85rem;">(Photo by <a href="${image.photographerUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none;">${image.photographer}</a>)</span>` : ''}
+  </figcaption>
+</figure></p>
+`
+              
+              const insertPosition = Math.min((index + 1) * 2, paragraphs.length - 2)
+              paragraphs[insertPosition] += imageHtml
+              console.log(`✅ Inserted image ${index + 1} after paragraph ${insertPosition}`)
+            })
+            
+            contentWithImages = paragraphs.join('</p>')
+            console.log('✅ Images inserted after paragraphs')
+          }
+        }
+      }
       
       console.log('✅ Image replacement complete')
     } else {
