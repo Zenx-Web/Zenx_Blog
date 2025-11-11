@@ -305,7 +305,8 @@ export default async function BlogPost({
   searchParams: Promise<{ preview?: string }>
 }) {
   const { slug } = await params
-  const { preview } = await searchParams
+  const searchParamsResolved = await searchParams
+  const preview = searchParamsResolved?.preview
   const isPreview = preview === 'true'
   
   console.log('🔍 Blog page - slug:', slug, 'preview param:', preview, 'isPreview:', isPreview)
@@ -319,6 +320,7 @@ export default async function BlogPost({
   const data = await getBlogPost(slug, isPreview)
   
   if (!data) {
+    console.error('❌ No data returned from getBlogPost')
     notFound()
   }
 
@@ -522,8 +524,14 @@ export default async function BlogPost({
       {isPreview && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black px-4 py-2 text-center font-bold">
           👁️ PREVIEW MODE - This is an unpublished draft
+          <script dangerouslySetInnerHTML={{
+            __html: `console.log('🔍 Client: Preview mode active for post: ${post.slug}')`
+          }} />
         </div>
       )}
+      <script dangerouslySetInnerHTML={{
+        __html: `console.log('🔍 Client: Blog post loaded - slug: ${post.slug}, preview: ${isPreview}')`
+      }} />
       <ReadingProgress targetId={articleDomId} />
       <ReadingHistoryTracker postId={post.id} articleElementId={articleDomId} />
       <PostViewCounter
