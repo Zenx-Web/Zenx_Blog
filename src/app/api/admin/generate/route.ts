@@ -305,11 +305,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Enhance content with ImZenx branding and AI disclosures
+    // NOTE: Don't pass images here because they're already embedded in contentWithImages
     const enhancedContent = processContentForPublication(contentWithImages, {
       aiSummary: generatedBlog.aiSummary,
       editorsNote: generatedBlog.editorsNote,
       keyTakeaways: generatedBlog.keyTakeaways,
-      images: contentImages, // Pass all fetched images for Image Suggestions section
+      // images: contentImages, // REMOVED - images already embedded above
       forceRebrand: false
     })
 
