@@ -32,6 +32,9 @@ const ARTICLE_SIDEBAR_AD_SLOT = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SIDEBAR_
 const ARTICLE_INLINE_AD_SLOT_PRIMARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_PRIMARY_SLOT ?? ''
 const ARTICLE_INLINE_AD_SLOT_SECONDARY = process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_INLINE_SECONDARY_SLOT ?? ''
 
+// Enable dynamic rendering to support preview mode
+export const dynamicParams = true
+
 type BlogPost = {
   id: string
   slug: string
@@ -190,6 +193,8 @@ function injectInlineAdsIntoHtml(html: string): string {
 
 async function getBlogPost(slug: string, preview: boolean = false): Promise<{ post: BlogPost; relatedPosts: RelatedPost[] } | null> {
   try {
+    console.log('📖 getBlogPost - slug:', slug, 'preview:', preview)
+    
     // Build query with or without is_published check based on preview mode
     let query = supabase
       .from('blog_posts')
@@ -198,7 +203,10 @@ async function getBlogPost(slug: string, preview: boolean = false): Promise<{ po
     
     // Only filter by is_published if NOT in preview mode
     if (!preview) {
+      console.log('✅ Adding is_published filter (normal mode)')
       query = query.eq('is_published', true)
+    } else {
+      console.log('🔓 Skipping is_published filter (preview mode)')
     }
     
     const { data: post, error } = await query.single()
@@ -299,6 +307,8 @@ export default async function BlogPost({
   const { slug } = await params
   const { preview } = await searchParams
   const isPreview = preview === 'true'
+  
+  console.log('🔍 Blog page - slug:', slug, 'preview param:', preview, 'isPreview:', isPreview)
   
   const headersList = await headers()
   const protocol = headersList.get('x-forwarded-proto') ?? 'http'
@@ -509,6 +519,11 @@ export default async function BlogPost({
 
   return (
     <div className="min-h-screen bg-white pt-6">
+      {isPreview && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black px-4 py-2 text-center font-bold">
+          👁️ PREVIEW MODE - This is an unpublished draft
+        </div>
+      )}
       <ReadingProgress targetId={articleDomId} />
       <ReadingHistoryTracker postId={post.id} articleElementId={articleDomId} />
       <PostViewCounter
