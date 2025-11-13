@@ -1144,11 +1144,15 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }
 
     const slug = savedPost?.slug || slugifyTitle(generatedBlog.title)
+    
+    // CRITICAL: Use savedPost.content if available (has images), otherwise use generatedBlog.content
+    const contentToUse = savedPost?.content || generatedBlog.content
+    
     const basePayload = {
       id: savedPost?.id,
       title: generatedBlog.title,
       slug,
-      content: generatedBlog.content,
+      content: contentToUse, // Use saved content with images if available
       excerpt: generatedBlog.excerpt,
       category: category || 'world-news',
       tags: Array.isArray(generatedBlog.tags) ? generatedBlog.tags : [],
