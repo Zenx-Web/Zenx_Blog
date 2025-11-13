@@ -322,12 +322,15 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('✅ Image replacement complete')
+      console.log('📏 Content length after replacement:', contentWithImages.length)
+      console.log('🔍 Checking if images are in content:', contentWithImages.includes('<figure class="blog-image"'))
     } else {
       console.log('ℹ️ No fetched images to insert')
     }
 
     // Enhance content with ImZenx branding and AI disclosures
     // NOTE: Don't pass images here because they're already embedded in contentWithImages
+    console.log('🎨 Processing content for publication...')
     const enhancedContent = processContentForPublication(contentWithImages, {
       aiSummary: generatedBlog.aiSummary,
       editorsNote: generatedBlog.editorsNote,
@@ -335,6 +338,9 @@ export async function POST(request: NextRequest) {
       // images: contentImages, // REMOVED - images already embedded above
       forceRebrand: false
     })
+    console.log('✅ Content enhancement complete')
+    console.log('📏 Final content length:', enhancedContent.length)
+    console.log('🔍 Images still in final content?', enhancedContent.includes('<figure class="blog-image"'))
 
     // Save to database as draft
     const insertPayload: TablesInsert<'blog_posts'> = {
