@@ -135,10 +135,16 @@ export async function POST(request: NextRequest) {
     let contentWithImages = generatedBlog.content
     if ('fetchedImages' in generatedBlog && generatedBlog.fetchedImages && generatedBlog.fetchedImages.length > 0) {
       console.log('🖼️ Starting image replacement for', generatedBlog.fetchedImages.length, 'images')
-      console.log('📄 Content preview (first 500 chars):', contentWithImages.substring(0, 500))
-      console.log('🔍 Looking for placeholders with class "ai-image-placeholder"...')
-      const placeholderMatches = contentWithImages.match(/<div[^>]*class=["'][^"']*ai-image-placeholder[^"']*["'][^>]*>/gi)
-      console.log('Found placeholders:', placeholderMatches ? placeholderMatches.length : 0, placeholderMatches)
+      console.log('📄 Content length:', contentWithImages.length)
+      
+      // First, let's see ALL placeholder divs
+      const allPlaceholderDivs = contentWithImages.match(/<div[^>]*ai-image-placeholder[^>]*>[\s\S]*?<\/div>/gi)
+      console.log('🔍 All placeholder divs found:', allPlaceholderDivs?.length || 0)
+      if (allPlaceholderDivs) {
+        allPlaceholderDivs.forEach((div, i) => {
+          console.log(`   Placeholder ${i + 1}:`, div.substring(0, 150))
+        })
+      }
       
       let placeholdersFound = 0
       
@@ -213,12 +219,28 @@ export async function POST(request: NextRequest) {
             contentWithImages = contentWithImages.replace(pattern4, imageHtml)
             replaced = true
             placeholdersFound++
-            console.log(`✅ Replaced image ${index + 1} using strategy 4 (aggressive text match)`)
+            console.log(`  ✅ Replaced image ${index + 1} using strategy 4 (aggressive text match)`)
+          } else {
+            console.log(`  ❌ Strategy 4 failed - no match`)
+          }
+        }
+        
+        // Strategy 5: Replace entire placeholder div regardless of attributes (nuclear option)
+        if (!replaced) {
+          const pattern5 = /<div[^>]*ai-image-placeholder[^>]*>[\s\S]*?<\/div>/i
+          if (pattern5.test(contentWithImages)) {
+            // Replace first occurrence only
+            contentWithImages = contentWithImages.replace(pattern5, imageHtml)
+            replaced = true
+            placeholdersFound++
+            console.log(`  ✅ Replaced image ${index + 1} using strategy 5 (nuclear - any placeholder div)`)
+          } else {
+            console.log(`  ❌ Strategy 5 failed - no placeholder div found`)
           }
         }
         
         if (!replaced) {
-          console.warn(`⚠️ Could not find placeholder for image ${index + 1} (${image.placement})`)
+          console.warn(`⚠️ ALL STRATEGIES FAILED for image ${index + 1} (${image.placement})`)
         }
       })
       
