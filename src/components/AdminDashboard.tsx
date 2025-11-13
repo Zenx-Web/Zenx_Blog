@@ -58,6 +58,7 @@ interface BlogPostRecord {
   featured_image?: string | null
   published_at?: string | null
   title?: string
+  content?: string
   created_at?: string | null
   updated_at?: string | null
 }
