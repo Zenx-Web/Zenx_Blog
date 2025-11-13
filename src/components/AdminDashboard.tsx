@@ -1226,6 +1226,46 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       return
     }
 
+    // If post is already saved as draft, just update publish status (avoid huge payload)
+    if (savedPost?.id) {
+      setIsPublishing(true)
+      try {
+        const response = await fetch('/api/admin/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: savedPost.id,
+            is_published: true,
+            published_at: new Date().toISOString()
+          })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error?.error || 'Request failed')
+        }
+
+        const data = await response.json()
+        if (data.post) {
+          setSavedPost(mapPostRecord(data.post))
+        }
+
+        showNotification('success', 'Post published successfully!')
+        if (data.post?.id) {
+          void notifySubscribers(data.post.id)
+        }
+      } catch (error) {
+        console.error('Error publishing post:', error)
+        showNotification('error', `Failed to publish post: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      } finally {
+        setIsPublishing(false)
+      }
+      return
+    }
+
+    // If not saved yet, use full payload
     const payload = buildPostPayload(true)
     if (!payload) {
       showNotification('error', 'Unable to prepare publish payload.')
