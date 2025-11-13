@@ -12,7 +12,7 @@ import { load } from 'cheerio'
 import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import TableOfContents, { type TocHeading } from '@/components/TableOfContents'
 import ReadingProgress from '@/components/ReadingProgress'
 import NewsletterSubscribe from '@/components/NewsletterSubscribe'
@@ -198,8 +198,12 @@ async function getBlogPost(slug: string, preview: boolean = false): Promise<{ po
     console.log('   - slug:', slug)
     console.log('   - preview:', preview)
     
+    // Use admin client for preview mode to bypass RLS
+    const client = preview ? supabaseAdmin : supabase
+    console.log('   - using client:', preview ? 'admin (bypass RLS)' : 'anon (with RLS)')
+    
     // Build query with or without is_published check based on preview mode
-    let query = supabase
+    let query = client
       .from('blog_posts')
       .select('*')
       .eq('slug', slug)
