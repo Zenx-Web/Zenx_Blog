@@ -55,10 +55,10 @@ async function fetchCopyrightFreeImage(query, count = 1) {
 function insertImagesIntoContent(content, images) {
   console.log('  📝 Processing content for image insertion...')
   
-  // First, try to replace existing placeholders
   let updatedContent = content
-  let placeholdersReplaced = 0
+  let replacedCount = 0
   
+  // Strategy 5 (Nuclear Option): Replace ANY div with ai-image-placeholder class
   images.forEach((image, index) => {
     const imageHtml = `
 <figure class="blog-image embedded-image" style="margin: 2.5rem 0;">
@@ -69,16 +69,36 @@ function insertImagesIntoContent(content, images) {
   </figcaption>
 </figure>`
     
-    // Try to replace placeholder
-    const placeholderPattern = /Image will be inserted here/i
-    if (placeholderPattern.test(updatedContent)) {
-      updatedContent = updatedContent.replace(placeholderPattern, imageHtml)
-      placeholdersReplaced++
+    // Try multiple strategies
+    let replaced = false
+    
+    // Strategy 1: Replace entire placeholder div
+    const divPattern = /<div[^>]*ai-image-placeholder[^>]*>[\s\S]*?<\/div>/i
+    if (divPattern.test(updatedContent)) {
+      updatedContent = updatedContent.replace(divPattern, imageHtml)
+      replaced = true
+      replacedCount++
+      console.log(`    ✅ Image ${index + 1}: Replaced placeholder div`)
+    }
+    
+    // Strategy 2: Replace "Image will be inserted here" text
+    if (!replaced) {
+      const textPattern = /Image will be inserted here/i
+      if (textPattern.test(updatedContent)) {
+        updatedContent = updatedContent.replace(textPattern, imageHtml)
+        replaced = true
+        replacedCount++
+        console.log(`    ✅ Image ${index + 1}: Replaced placeholder text`)
+      }
+    }
+    
+    if (!replaced) {
+      console.log(`    ⚠️ Image ${index + 1}: No placeholder found`)
     }
   })
   
-  if (placeholdersReplaced > 0) {
-    console.log(`  ✅ Replaced ${placeholdersReplaced} placeholder(s)`)
+  if (replacedCount > 0) {
+    console.log(`  ✅ Replaced ${replacedCount} of ${images.length} placeholder(s)`)
     return updatedContent
   }
   
@@ -130,11 +150,11 @@ function insertImagesIntoContent(content, images) {
 async function fixBlogImages() {
   console.log('🔍 Fetching blogs with placeholder images...\n')
   
-  // Find blogs with "Image will be inserted here" text
+  // Find blogs with "Image will be inserted here" text OR ai-image-placeholder divs
   const { data: blogs, error } = await supabase
     .from('blog_posts')
     .select('id, title, slug, content, category')
-    .ilike('content', '%Image will be inserted here%')
+    .or('content.ilike.%Image will be inserted here%,content.ilike.%ai-image-placeholder%')
     .limit(20)
   
   if (error) {
