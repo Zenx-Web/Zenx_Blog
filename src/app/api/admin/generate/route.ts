@@ -324,6 +324,13 @@ export async function POST(request: NextRequest) {
       console.log('✅ Image replacement complete')
       console.log('📏 Content length after replacement:', contentWithImages.length)
       console.log('🔍 Checking if images are in content:', contentWithImages.includes('<figure class="blog-image"'))
+      
+      // DEBUG: Log actual <figure> tags found
+      const figureMatches = contentWithImages.match(/<figure[^>]*class="blog-image"[^>]*>/g)
+      console.log(`🖼️ Number of <figure> tags in content: ${figureMatches ? figureMatches.length : 0}`)
+      if (figureMatches) {
+        console.log('🖼️ Figure tags found:', figureMatches)
+      }
     } else {
       console.log('ℹ️ No fetched images to insert')
     }
@@ -341,6 +348,13 @@ export async function POST(request: NextRequest) {
     console.log('✅ Content enhancement complete')
     console.log('📏 Final content length:', enhancedContent.length)
     console.log('🔍 Images still in final content?', enhancedContent.includes('<figure class="blog-image"'))
+    
+    // DEBUG: Log figure tags in enhanced content
+    const enhancedFigureMatches = enhancedContent.match(/<figure[^>]*class="blog-image"[^>]*>/g)
+    console.log(`🖼️ Number of <figure> tags in ENHANCED content: ${enhancedFigureMatches ? enhancedFigureMatches.length : 0}`)
+    
+    // DEBUG: Log content sample (first 500 chars)
+    console.log('📄 Enhanced content preview (first 500 chars):', enhancedContent.substring(0, 500))
 
     // Save to database as draft
     const insertPayload: TablesInsert<'blog_posts'> = {
@@ -373,6 +387,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Blog post saved successfully')
+    console.log('🗄️ Saved post ID:', blogPost?.id)
+    console.log('📏 Saved content length:', blogPost?.content?.length || 0)
+    
+    // DEBUG: Verify images in saved post
+    const savedHasImages = blogPost?.content?.includes('<figure class="blog-image"')
+    console.log('🔍 Saved post has images?', savedHasImages)
+    if (!savedHasImages) {
+      console.error('🚨 CRITICAL: Images were LOST during database save!')
+      console.log('📄 Saved content preview:', blogPost?.content?.substring(0, 500))
+    }
 
     // Mark topic as used (ignore errors for this)
     if (markTopicUsed && rawTopic) {
