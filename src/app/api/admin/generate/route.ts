@@ -103,11 +103,17 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Using fallback content')
     }
 
-    // Create slug from title
+    // Create slug from title (limit to 100 chars for database)
     let slug = generatedBlog.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
+    
+    // CRITICAL: Limit slug to 100 characters to match database constraint
+    if (slug.length > 100) {
+      slug = slug.substring(0, 100).replace(/-+$/, '')
+      console.log(`⚠️ Slug truncated to 100 chars: ${slug}`)
+    }
 
     slug = await ensureUniqueSlug(slug)
 
