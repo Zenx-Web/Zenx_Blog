@@ -853,6 +853,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       'Sports': '⚽',
       'Business': '💼',
       'Lifestyle': '🌟',
+      'Gaming': '🎮',
       'World News': '📰',
       'General': '📝'
     }
@@ -887,15 +888,15 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     let sportsScore = 0
     let businessScore = 0
     let lifestyleScore = 0
+    let gamingScore = 0
     
-    // Technology keywords - more specific
+    // Technology keywords - more specific (removed gaming keywords)
     const techKeywords = [
       'ai', 'artificial intelligence', 'machine learning', 'chatgpt', 'openai',
       'software', 'app', 'application', 'programming', 'coding', 'developer',
       'iphone', 'android', 'smartphone', 'samsung', 'pixel',
       'laptop', 'computer', 'pc', 'mac', 'windows', 'linux',
       'bitcoin', 'crypto', 'cryptocurrency', 'blockchain', 'ethereum', 'nft',
-      'gaming', 'gamer', 'playstation', 'xbox', 'nintendo', 'steam',
       'tesla', 'spacex', 'starlink', 'rocket', 'space tech',
       'google', 'microsoft', 'apple', 'amazon', 'meta', 'facebook',
       'vr', 'virtual reality', 'ar', 'metaverse',
@@ -956,6 +957,25 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       'meditation', 'mindfulness', 'mental health'
     ]
     
+    // Gaming keywords - very specific
+    const gamingKeywords = [
+      'video game', 'gaming', 'gamer', 'esports', 'e-sports',
+      'playstation', 'ps5', 'ps4', 'sony console',
+      'xbox', 'xbox series', 'microsoft gaming',
+      'nintendo', 'switch', 'mario', 'zelda', 'pokemon',
+      'steam', 'valve', 'pc gaming', 'gaming pc',
+      'fortnite', 'minecraft', 'roblox', 'call of duty', 'cod',
+      'league of legends', 'lol', 'dota', 'valorant',
+      'rpg', 'fps', 'mmorpg', 'battle royale',
+      'game release', 'game launch', 'game trailer',
+      'game developer', 'game studio', 'game publisher',
+      'twitch', 'streamer', 'streaming game',
+      'game console', 'handheld console',
+      'game controller', 'gaming mouse', 'gaming keyboard',
+      'game graphics', 'ray tracing', 'frame rate', 'fps gaming',
+      'game mod', 'modding', 'game patch', 'game update'
+    ]
+    
     // Weight matches - longer phrases get higher weight
     techKeywords.forEach(keyword => {
       if (text.includes(keyword)) {
@@ -992,13 +1012,21 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       }
     })
     
+    gamingKeywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        const weight = keyword.split(' ').length
+        gamingScore += weight
+      }
+    })
+    
     // Find category with highest score
-    const maxScore = Math.max(techScore, entertainmentScore, sportsScore, businessScore, lifestyleScore)
+    const maxScore = Math.max(techScore, entertainmentScore, sportsScore, businessScore, lifestyleScore, gamingScore)
     
     // If no strong match (score < 2), default to world-news
     if (maxScore < 2) return 'world-news'
     
     // Return category with highest score
+    if (gamingScore === maxScore) return 'gaming'  // Check gaming first (most specific)
     if (techScore === maxScore) return 'technology'
     if (entertainmentScore === maxScore) return 'entertainment'
     if (sportsScore === maxScore) return 'sports'
