@@ -1498,33 +1498,33 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Zenx Blog Admin Dashboard
+        <div className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <h1 className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+            ✨ Zenx Blog Admin Dashboard
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            Generate AI-powered blog content from trending topics
+          <p className="text-sm sm:text-base text-gray-600 font-medium">
+            🚀 Generate AI-powered blog content from trending topics
           </p>
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="text-sm text-gray-500">
-              Logged in as <span className="font-semibold text-gray-800">{adminEmail}</span>
+            <div className="text-sm bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-lg border border-blue-200">
+              👤 Logged in as <span className="font-bold text-blue-700">{adminEmail}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={() => void fetchManagedPosts()}
                 disabled={isLoadingPosts}
-                className="flex-1 sm:flex-none px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {isLoadingPosts ? 'Refreshing posts…' : 'Refresh Posts'}
+                {isLoadingPosts ? '🔄 Refreshing...' : '🔄 Refresh Posts'}
               </button>
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex-1 sm:flex-none px-4 py-2 text-sm bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl shadow-md hover:from-red-600 hover:to-pink-700 hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {isLoggingOut ? 'Signing out…' : 'Sign Out'}
+                {isLoggingOut ? '👋 Signing out...' : '🚪 Sign Out'}
               </button>
             </div>
           </div>
@@ -1532,11 +1532,11 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
 
         {/* Notification Toast */}
         {notification.show && (
-          <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transition-all duration-300 ${
-            notification.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' :
-            notification.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' :
-            notification.type === 'warning' ? 'bg-yellow-50 border border-yellow-200 text-yellow-800' :
-            'bg-blue-50 border border-blue-200 text-blue-800'
+          <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-2xl shadow-2xl border-2 transition-all duration-300 animate-in slide-in-from-right ${
+            notification.type === 'success' ? 'bg-gradient-to-r from-green-50 to-emerald-100 border-green-300 text-green-900' :
+            notification.type === 'error' ? 'bg-gradient-to-r from-red-50 to-pink-100 border-red-300 text-red-900' :
+            notification.type === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-orange-100 border-yellow-300 text-yellow-900' :
+            'bg-gradient-to-r from-blue-50 to-cyan-100 border-blue-300 text-blue-900'
           }`}>
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -1578,12 +1578,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8 hover:shadow-2xl transition-shadow duration-300">
           <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Manage Existing Posts</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Publish, unpublish, or remove posts that have already been generated.
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">📚 Manage Existing Posts</h2>
+              <p className="text-sm text-gray-600 mt-2 font-medium">
+                ✏️ Publish, unpublish, or remove posts that have already been generated.
               </p>
             </div>
             <div className="flex flex-col w-full gap-3 sm:flex-row sm:items-center lg:w-auto">
@@ -1595,8 +1595,8 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     setPostSearchTerm(event.target.value)
                     setPostPage(1)
                   }}
-                  className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-12 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  placeholder="Search title, slug, or category"
+                  className="w-full rounded-xl border-2 border-gray-200 bg-white py-2.5 pl-10 pr-12 text-sm text-gray-700 shadow-md placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-200"
+                  placeholder="🔍 Search posts..."
                   aria-label="Search posts"
                 />
                 <svg
@@ -1645,10 +1645,10 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                       setPostFilter(filter.value)
                       setPostPage(1)
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    className={`px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all duration-200 shadow-md hover:shadow-lg ${
                       postFilter === filter.value
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-transparent scale-105'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
                     {filter.label}
@@ -1688,7 +1688,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
               return (
                 <div
                   key={post.id}
-                  className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white"
+                  className="border-2 border-gray-100 rounded-2xl p-5 shadow-md bg-gradient-to-br from-white to-gray-50 hover:shadow-xl hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-1"
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     <div className="flex-1">
@@ -1797,12 +1797,12 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-6 mb-8 hover:shadow-2xl transition-shadow duration-300">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Review, filter, and manage registered readers. Click a user to edit their profile or send account actions.
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">👥 User Management</h2>
+              <p className="text-sm text-gray-600 mt-2 font-medium">
+                🔧 Review, filter, and manage registered readers. Click a user to edit their profile or send account actions.
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -1811,10 +1811,10 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   <button
                     key={filter.value}
                     onClick={() => setUserStatusFilter(filter.value)}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-medium border transition-colors whitespace-nowrap ${
+                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all duration-200 shadow-md hover:shadow-lg whitespace-nowrap ${
                       userStatusFilter === filter.value
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-green-500 to-teal-600 text-white border-transparent scale-105'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50'
                     }`}
                   >
                     {filter.label}
@@ -2118,7 +2118,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
 
         {/* Blog Creation Mode Toggle */}
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 mb-8 border-2 border-purple-200">
+        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 rounded-2xl shadow-2xl p-6 mb-8 border-2 border-purple-300 hover:shadow-3xl transition-all duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-1">✍️ Blog Creation Mode</h2>

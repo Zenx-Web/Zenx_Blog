@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CalendarIcon, ClockIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import AdSlot from '@/components/AdSlot'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+// Register GSAP plugins
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger)
+}
 
 interface BlogPost {
   id: string
@@ -48,6 +55,190 @@ export default function BlogList({
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
+  
+  // Refs for GSAP animations
+  const heroRef = useRef<HTMLDivElement>(null)
+  const categoriesRef = useRef<HTMLDivElement>(null)
+  const featuredRef = useRef<HTMLDivElement>(null)
+  const articlesRef = useRef<HTMLDivElement>(null)
+  
+  // Initialize GSAP animations - disabled for now to ensure content shows
+  useEffect(() => {
+    // Skip animations on initial load to ensure content is visible
+    if (typeof window === 'undefined') return
+    
+    const timer = setTimeout(() => {
+      const ctx = gsap.context(() => {
+        // Hero section animation
+        if (heroRef.current) {
+          const badges = heroRef.current.querySelectorAll('.hero-badge')
+          const title = heroRef.current.querySelector('.hero-title')
+          const excerpt = heroRef.current.querySelector('.hero-excerpt')
+          const metas = heroRef.current.querySelectorAll('.hero-meta')
+          const image = heroRef.current.querySelector('.hero-image')
+          
+          if (badges.length) {
+            gsap.from(badges, {
+              opacity: 0,
+              scale: 0.8,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: 'back.out(1.7)',
+              clearProps: 'all'
+            })
+          }
+          
+          if (title) {
+            gsap.from(title, {
+              opacity: 0,
+              y: 50,
+              duration: 0.8,
+              delay: 0.3,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+          
+          if (excerpt) {
+            gsap.from(excerpt, {
+              opacity: 0,
+              y: 30,
+              duration: 0.8,
+              delay: 0.5,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+          
+          if (metas.length) {
+            gsap.from(metas, {
+              opacity: 0,
+              x: -20,
+              duration: 0.6,
+              delay: 0.7,
+              stagger: 0.1,
+              ease: 'power2.out',
+              clearProps: 'all'
+            })
+          }
+          
+          if (image) {
+            gsap.from(image, {
+              opacity: 0,
+              scale: 0.95,
+              duration: 1,
+              delay: 0.4,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+        }
+        
+        // Categories animation
+        if (categoriesRef.current) {
+          const pills = categoriesRef.current.querySelectorAll('.category-pill')
+          if (pills.length) {
+            gsap.from(pills, {
+              scrollTrigger: {
+                trigger: categoriesRef.current,
+                start: 'top 85%',
+                toggleActions: 'play none none none'
+              },
+              opacity: 0,
+              y: 20,
+              duration: 0.5,
+              stagger: 0.05,
+              ease: 'power2.out',
+              clearProps: 'all'
+            })
+          }
+        }
+        
+        // Featured posts animation
+        if (featuredRef.current) {
+          const heading = featuredRef.current.querySelector('.section-heading')
+          const cards = featuredRef.current.querySelectorAll('.featured-card')
+          
+          if (heading) {
+            gsap.from(heading, {
+              scrollTrigger: {
+                trigger: featuredRef.current,
+                start: 'top 85%',
+                toggleActions: 'play none none none'
+              },
+              opacity: 0,
+              x: -50,
+              duration: 0.8,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+          
+          if (cards.length) {
+            gsap.from(cards, {
+              scrollTrigger: {
+                trigger: featuredRef.current,
+                start: 'top 80%',
+                toggleActions: 'play none none none'
+              },
+              opacity: 0,
+              y: 60,
+              duration: 0.8,
+              stagger: 0.15,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+        }
+        
+        // Articles animation
+        if (articlesRef.current) {
+          const heading = articlesRef.current.querySelector('.section-heading')
+          const cards = articlesRef.current.querySelectorAll('.article-card')
+          
+          if (heading) {
+            gsap.from(heading, {
+              scrollTrigger: {
+                trigger: articlesRef.current,
+                start: 'top 85%',
+                toggleActions: 'play none none none'
+              },
+              opacity: 0,
+              x: -50,
+              duration: 0.8,
+              ease: 'power3.out',
+              clearProps: 'all'
+            })
+          }
+          
+          if (cards.length) {
+            gsap.from(cards, {
+              scrollTrigger: {
+                trigger: articlesRef.current,
+                start: 'top 80%',
+                toggleActions: 'play none none none'
+              },
+              opacity: 0,
+              y: 40,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: 'power2.out',
+              clearProps: 'all'
+            })
+          }
+        }
+      })
+      
+      return () => {
+        ctx.revert()
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      }
+    }, 100) // Small delay to ensure DOM is ready
+    
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [])
 
   const formatDateSafe = (value: string | null, pattern: string, fallback: string) => {
     if (!value) return fallback
@@ -188,45 +379,45 @@ export default function BlogList({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gray-50 dark:bg-gray-900">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950">
       {heroPost && !searchQuery && (
-        <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 dark:bg-slate-800 text-white">
+        <section ref={heroRef} className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 dark:bg-gradient-to-br dark:from-slate-800 dark:via-indigo-900 dark:to-purple-900 text-white shadow-2xl border border-white/10">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="relative z-10 flex flex-col justify-between p-8 sm:p-10 lg:p-12">
               <div className="space-y-6">
                 <div className="flex flex-wrap gap-3">
-                  <span className="rounded-full bg-white/15 px-4 py-1 text-sm font-semibold uppercase tracking-wider">
+                  <span className="hero-badge rounded-full bg-white/15 px-4 py-1 text-sm font-semibold uppercase tracking-wider">
                     Featured
                   </span>
-                  <span className="rounded-full bg-blue-500/90 px-4 py-1 text-sm font-semibold">
+                  <span className="hero-badge rounded-full bg-blue-500/90 px-4 py-1 text-sm font-semibold">
                     {heroPost.category.replace('-', ' ')}
                   </span>
                 </div>
                 <Link href={`/blog/${heroPost.slug}`} className="group block max-w-3xl">
-                  <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl transition-colors group-hover:text-blue-200">
+                  <h1 className="hero-title text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl transition-colors group-hover:text-blue-200">
                     {heroPost.title}
                   </h1>
                 </Link>
-                <p className="max-w-2xl text-base text-slate-200 sm:text-lg">
+                <p className="hero-excerpt max-w-2xl text-base text-slate-200 sm:text-lg">
                   {heroPost.excerpt}
                 </p>
               </div>
               <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-slate-300">
-                <div className="flex items-center">
+                <div className="hero-meta flex items-center">
                   <CalendarIcon className="mr-2 h-5 w-5" />
                   {formatDateSafe(heroPost.published_at, 'MMM dd, yyyy', 'Unpublished')}
                 </div>
-                <div className="flex items-center">
+                <div className="hero-meta flex items-center">
                   <ClockIcon className="mr-2 h-5 w-5" />
                   {(heroPost.read_time ?? 0)} min read
                 </div>
-                <div className="flex items-center">
+                <div className="hero-meta flex items-center">
                   <EyeIcon className="mr-2 h-5 w-5" />
                   {(heroPost.views ?? 0).toLocaleString()}
                 </div>
               </div>
             </div>
-            <div className="relative aspect-[4/3] overflow-hidden">
+            <div className="hero-image relative aspect-[4/3] overflow-hidden">
               {heroPost.featured_image ? (
                 <Image
                   src={heroPost.featured_image}
@@ -283,15 +474,15 @@ export default function BlogList({
       )}
 
       {categorySummary.length > 0 && (
-        <section className="mb-12">
+        <section ref={categoriesRef} className="mb-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Explore by Topic</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Jump into categories other readers love right now.</p>
+              <h2 className="section-heading text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent">✨ Explore by Topic</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 font-medium">🔥 Jump into categories other readers love right now.</p>
             </div>
             <Link
               href="/?category=all"
-              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${!category || category === 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              className={`category-pill inline-flex items-center rounded-xl px-5 py-2.5 text-sm font-bold transition shadow-md hover:shadow-lg ${!category || category === 'all' ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 border-2 border-gray-200 dark:border-gray-700'}`}
             >
               All Articles
             </Link>
@@ -304,10 +495,10 @@ export default function BlogList({
                 <Link
                   key={categoryKey}
                   href={`/?category=${encodeURIComponent(categoryKey)}`}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400'}`}
+                  className={`category-pill inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition shadow-md hover:shadow-lg ${isActive ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 border-2 border-gray-200 dark:border-gray-700'}`}
                 >
                   <span className="capitalize">{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isActive ? 'bg-blue-500/40 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${isActive ? 'bg-white/25 text-white' : 'bg-gradient-to-r from-blue-100 to-purple-100 dark:bg-gray-700 text-blue-700 dark:text-gray-300'}`}>
                     {count}
                   </span>
                 </Link>
@@ -330,12 +521,12 @@ export default function BlogList({
       )}
 
       {supportingPosts.length > 0 && searchQuery && (
-        <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">Featured Picks</h2>
+        <section ref={featuredRef} className="mb-12">
+          <h2 className="section-heading mb-6 text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">⭐ Featured Picks</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {supportingPosts.map((post) => (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-gray-900">
+                <article className="featured-card flex h-full flex-col overflow-hidden rounded-2xl border-2 border-gray-100 dark:border-gray-800 bg-gradient-to-br from-white to-gray-50 dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 shadow-lg transition hover:-translate-y-2 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-600 dark:hover:shadow-gray-900">
                   {post.featured_image && (
                     <div className="relative h-48">
                       <Image
@@ -372,12 +563,12 @@ export default function BlogList({
       )}
 
       {/* Regular Posts Section */}
-      <section>
+      <section ref={articlesRef}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {searchQuery ? `Search Results for "${searchQuery}"` : 
-             category && category !== 'all' ? `${category.replace('-', ' ')} Articles` : 
-             'Latest Articles'}
+          <h2 className="section-heading text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            {searchQuery ? `🔍 Search Results for "${searchQuery}"` : 
+             category && category !== 'all' ? `📰 ${category.replace('-', ' ')} Articles` : 
+             '📚 Latest Articles'}
           </h2>
         </div>
 
@@ -393,7 +584,7 @@ export default function BlogList({
                   const post = item.post
                   return (
                     <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                      <article className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl dark:hover:shadow-gray-900 transition-shadow border border-transparent dark:border-gray-700">
+                      <article className="article-card bg-gradient-to-br from-white to-gray-50 dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-2 dark:hover:shadow-gray-900 transition-all duration-300 border-2 border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600">
                         {post.featured_image && (
                           <div className="relative h-48">
                             <Image
@@ -403,30 +594,30 @@ export default function BlogList({
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute top-4 left-4">
-                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(post.category)}`}>
+                              <span className={`inline-block px-4 py-1.5 rounded-xl text-xs font-bold shadow-md ${getCategoryColor(post.category)}`}>
                                 {post.category.replace('-', ' ')}
                               </span>
                             </div>
                           </div>
                         )}
                         <div className="p-6">
-                          <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-3 line-clamp-2">
+                          <h3 className="font-bold text-xl text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-3 line-clamp-2">
                             {post.title}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3 text-sm leading-relaxed">
                             {post.excerpt}
                           </p>
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
+                          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-4 font-medium">
                             <div className="flex items-center">
-                              <CalendarIcon className="h-4 w-4 mr-1" />
+                              <CalendarIcon className="h-4 w-4 mr-1.5" />
                               {formatDateSafe(post.published_at, 'MMM dd', 'TBD')}
                             </div>
                             <div className="flex items-center">
-                              <ClockIcon className="h-4 w-4 mr-1" />
+                              <ClockIcon className="h-4 w-4 mr-1.5" />
                               {(post.read_time ?? 0)}m
                             </div>
                             <div className="flex items-center">
-                              <EyeIcon className="h-4 w-4 mr-1" />
+                              <EyeIcon className="h-4 w-4 mr-1.5" />
                               {(post.views ?? 0).toLocaleString()}
                             </div>
                           </div>
@@ -472,9 +663,9 @@ export default function BlogList({
                 <button
                   onClick={loadMore}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-10 py-4 rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100"
                 >
-                  {loading ? 'Loading...' : 'Load More Articles'}
+                  {loading ? '⏳ Loading...' : '📖 Load More Articles'}
                 </button>
               </div>
             )}
