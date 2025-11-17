@@ -188,131 +188,182 @@ export default function BlogList({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Hero Section - Enhanced */}
       {heroPost && !searchQuery && (
-        <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 dark:bg-slate-800 text-white">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative z-10 flex flex-col justify-between p-8 sm:p-10 lg:p-12">
-              <div className="space-y-6">
-                <div className="flex flex-wrap gap-3">
-                  <span className="rounded-full bg-white/15 px-4 py-1 text-sm font-semibold uppercase tracking-wider">
-                    Featured
-                  </span>
-                  <span className="rounded-full bg-blue-500/90 px-4 py-1 text-sm font-semibold">
-                    {heroPost.category.replace('-', ' ')}
-                  </span>
+        <section className="relative mb-16 overflow-hidden">
+          {/* Background gradient decoration */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-pink-600/5 dark:from-blue-400/10 dark:via-purple-400/10 dark:to-pink-400/10" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+            <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
+              {/* Hero Content */}
+              <div className="relative z-10 flex flex-col justify-center space-y-8">
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 animate-pulse">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      Featured Story
+                    </span>
+                    <span className="inline-flex items-center rounded-full border-2 border-blue-600/20 bg-blue-50 dark:bg-blue-900/30 px-4 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-300">
+                      {heroPost.category.replace('-', ' ')}
+                    </span>
+                  </div>
+                  
+                  <Link href={`/blog/${heroPost.slug}`} className="group block">
+                    <h1 className="text-4xl font-black leading-tight tracking-tight text-gray-900 dark:text-white sm:text-5xl lg:text-6xl transition-all duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      {heroPost.title}
+                    </h1>
+                  </Link>
+                  
+                  <p className="text-lg leading-relaxed text-gray-600 dark:text-gray-300 sm:text-xl">
+                    {heroPost.excerpt}
+                  </p>
+                  
+                  <Link 
+                    href={`/blog/${heroPost.slug}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105"
+                  >
+                    Read Full Story
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
                 </div>
-                <Link href={`/blog/${heroPost.slug}`} className="group block max-w-3xl">
-                  <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl transition-colors group-hover:text-blue-200">
-                    {heroPost.title}
-                  </h1>
-                </Link>
-                <p className="max-w-2xl text-base text-slate-200 sm:text-lg">
-                  {heroPost.excerpt}
-                </p>
+                
+                <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5" />
+                    <span className="font-medium">{formatDateSafe(heroPost.published_at, 'MMM dd, yyyy', 'Unpublished')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ClockIcon className="h-5 w-5" />
+                    <span className="font-medium">{(heroPost.read_time ?? 0)} min read</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <EyeIcon className="h-5 w-5" />
+                    <span className="font-medium">{(heroPost.views ?? 0).toLocaleString()} views</span>
+                  </div>
+                </div>
               </div>
-              <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-slate-300">
-                <div className="flex items-center">
-                  <CalendarIcon className="mr-2 h-5 w-5" />
-                  {formatDateSafe(heroPost.published_at, 'MMM dd, yyyy', 'Unpublished')}
+              
+              {/* Hero Image */}
+              <div className="relative">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl shadow-gray-900/20 dark:shadow-black/40 ring-1 ring-gray-900/10 dark:ring-white/10">
+                  {heroPost.featured_image ? (
+                    <Image
+                      src={heroPost.featured_image}
+                      alt={heroPost.title}
+                      fill
+                      priority
+                      className="object-cover transition-transform duration-500 hover:scale-105"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500" />
+                  )}
                 </div>
-                <div className="flex items-center">
-                  <ClockIcon className="mr-2 h-5 w-5" />
-                  {(heroPost.read_time ?? 0)} min read
-                </div>
-                <div className="flex items-center">
-                  <EyeIcon className="mr-2 h-5 w-5" />
-                  {(heroPost.views ?? 0).toLocaleString()}
-                </div>
+                {/* Decorative elements */}
+                <div className="absolute -bottom-4 -right-4 h-32 w-32 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
+                <div className="absolute -top-4 -left-4 h-32 w-32 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-3xl" />
               </div>
             </div>
-            <div className="relative aspect-[4/3] overflow-hidden">
-              {heroPost.featured_image ? (
-                <Image
-                  src={heroPost.featured_image}
-                  alt={heroPost.title}
-                  fill
-                  priority
-                  className="object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/60 via-purple-500/60 to-indigo-600/60" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
-            </div>
-          </div>
-          {supportingPosts.length > 0 && (
-            <div className="border-t border-white/10 bg-slate-900/80 backdrop-blur">
-              <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-2">
-                {supportingPosts.map((post) => (
+            
+            {/* Supporting Posts - Enhanced Cards */}
+            {supportingPosts.length > 0 && (
+              <div className="mt-12 grid gap-6 sm:grid-cols-2">
+                {supportingPosts.map((post, index) => (
                   <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                    <article className="flex gap-5 rounded-2xl border border-white/5 bg-white/5 p-5 transition hover:bg-white/10">
-                      <div className="flex-1 space-y-3">
-                        <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-100">
-                          {post.category.replace('-', ' ')}
-                        </span>
-                        <h3 className="text-lg font-semibold text-white transition group-hover:text-blue-200">
-                          {post.title}
-                        </h3>
-                        <p className="line-clamp-2 text-sm text-slate-200">
-                          {post.excerpt}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-slate-300">
-                          <span>{formatDateSafe(post.published_at, 'MMM dd', 'TBD')}</span>
-                          <span>•</span>
-                          <span>{(post.read_time ?? 0)} min read</span>
-                        </div>
-                      </div>
+                    <article className="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-lg shadow-gray-900/10 dark:shadow-black/30 ring-1 ring-gray-900/5 dark:ring-white/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-900/20 dark:hover:shadow-black/40">
                       {post.featured_image && (
-                        <div className="relative hidden h-24 w-32 flex-shrink-0 overflow-hidden rounded-xl sm:block">
+                        <div className="relative h-48 overflow-hidden">
                           <Image
                             src={post.featured_image}
                             alt={post.title}
                             fill
-                            className="object-cover transition group-hover:scale-105"
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
+                          <div className="absolute bottom-4 left-4">
+                            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/90 dark:bg-gray-900/90 px-3 py-1 text-xs font-semibold text-gray-900 dark:text-white backdrop-blur-sm">
+                              {post.category.replace('-', ' ')}
+                            </span>
+                          </div>
                         </div>
                       )}
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2 mb-3">
+                          {post.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
+                          {post.excerpt}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="font-medium">{formatDateSafe(post.published_at, 'MMM dd', 'TBD')}</span>
+                          <span>•</span>
+                          <span className="font-medium">{(post.read_time ?? 0)} min read</span>
+                        </div>
+                      </div>
+                      {/* Hover effect indicator */}
+                      <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 transform scale-x-0 transition-transform duration-300 group-hover:scale-x-100" />
                     </article>
                   </Link>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </section>
       )}
 
+      {/* Categories Section - Enhanced */}
       {categorySummary.length > 0 && (
-        <section className="mb-12">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Explore by Topic</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Jump into categories other readers love right now.</p>
-            </div>
-            <Link
-              href="/?category=all"
-              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${!category || category === 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              All Articles
-            </Link>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-3">
-            {categorySummary.map(({ category: categoryKey, count }) => {
-              const isActive = category === categoryKey
-              const label = categoryKey.replace('-', ' ')
-              return (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 p-8 shadow-xl shadow-gray-900/5 dark:shadow-black/20 ring-1 ring-gray-900/5 dark:ring-white/5">
+            <div className="relative z-10">
+              <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
+                <div>
+                  <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
+                    Explore by Topic
+                  </h2>
+                  <p className="text-base text-gray-600 dark:text-gray-400">
+                    Discover content that matches your interests
+                  </p>
+                </div>
                 <Link
-                  key={categoryKey}
-                  href={`/?category=${encodeURIComponent(categoryKey)}`}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400'}`}
+                  href="/?category=all"
+                  className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold uppercase tracking-wide transition-all duration-300 ${!category || category === 'all' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 scale-105' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-md hover:shadow-lg'}`}
                 >
-                  <span className="capitalize">{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isActive ? 'bg-blue-500/40 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-                    {count}
-                  </span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  All Articles
                 </Link>
-              )
-            })}
+              </div>
+              
+              <div className="flex flex-wrap gap-3">
+                {categorySummary.map(({ category: categoryKey, count }) => {
+                  const isActive = category === categoryKey
+                  const label = categoryKey.replace('-', ' ')
+                  return (
+                    <Link
+                      key={categoryKey}
+                      href={`/?category=${encodeURIComponent(categoryKey)}`}
+                      className={`group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${isActive ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 scale-105' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 hover:scale-105 shadow-md hover:shadow-lg'}`}
+                    >
+                      <span className="capitalize">{label}</span>
+                      <span className={`flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-bold min-w-[24px] transition-colors ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 group-hover:bg-blue-100 dark:group-hover:bg-blue-800'}`}>
+                        {count}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+            
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 h-64 w-64 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 h-64 w-64 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl" />
           </div>
 
           <div className="mt-8">
@@ -371,19 +422,31 @@ export default function BlogList({
         </section>
       )}
 
-      {/* Regular Posts Section */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {searchQuery ? `Search Results for "${searchQuery}"` : 
-             category && category !== 'all' ? `${category.replace('-', ' ')} Articles` : 
-             'Latest Articles'}
-          </h2>
+      {/* Regular Posts Section - Enhanced */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
+              {searchQuery ? `Search Results for "${searchQuery}"` : 
+               category && category !== 'all' ? `${category.replace('-', ' ')} Articles` : 
+               'Latest Articles'}
+            </h2>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              {searchQuery ? `Found ${visiblePosts.length} articles matching your search` : 
+               'Fresh content updated daily'}
+            </p>
+          </div>
         </div>
 
         {visiblePosts.length === 0 && !loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">No articles found.</p>
+          <div className="text-center py-20">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mb-6">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No articles found</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Try adjusting your search or filters</p>
           </div>
         ) : (
           <>
@@ -393,44 +456,47 @@ export default function BlogList({
                   const post = item.post
                   return (
                     <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                      <article className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl dark:hover:shadow-gray-900 transition-shadow border border-transparent dark:border-gray-700">
+                      <article className="relative h-full overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-lg shadow-gray-900/10 dark:shadow-black/30 ring-1 ring-gray-900/5 dark:ring-white/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-900/20 dark:hover:shadow-black/40">
                         {post.featured_image && (
-                          <div className="relative h-48">
+                          <div className="relative h-56 overflow-hidden">
                             <Image
                               src={post.featured_image}
                               alt={post.title}
                               fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="object-cover transition-transform duration-500 group-hover:scale-110"
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
                             <div className="absolute top-4 left-4">
-                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(post.category)}`}>
+                              <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide backdrop-blur-sm ${getCategoryColor(post.category)}`}>
                                 {post.category.replace('-', ' ')}
                               </span>
                             </div>
                           </div>
                         )}
                         <div className="p-6">
-                          <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-3 line-clamp-2">
+                          <h3 className="font-black text-xl text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 mb-3 line-clamp-2">
                             {post.title}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3 leading-relaxed">
                             {post.excerpt}
                           </p>
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
-                            <div className="flex items-center">
-                              <CalendarIcon className="h-4 w-4 mr-1" />
-                              {formatDateSafe(post.published_at, 'MMM dd', 'TBD')}
+                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-4 w-4" />
+                              <span className="font-medium">{formatDateSafe(post.published_at, 'MMM dd', 'TBD')}</span>
                             </div>
-                            <div className="flex items-center">
-                              <ClockIcon className="h-4 w-4 mr-1" />
-                              {(post.read_time ?? 0)}m
+                            <div className="flex items-center gap-1">
+                              <ClockIcon className="h-4 w-4" />
+                              <span className="font-medium">{(post.read_time ?? 0)}m</span>
                             </div>
-                            <div className="flex items-center">
-                              <EyeIcon className="h-4 w-4 mr-1" />
-                              {(post.views ?? 0).toLocaleString()}
+                            <div className="flex items-center gap-1">
+                              <EyeIcon className="h-4 w-4" />
+                              <span className="font-medium">{(post.views ?? 0).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
+                        {/* Hover effect indicator */}
+                        <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 transform scale-x-0 transition-transform duration-300 group-hover:scale-x-100" />
                       </article>
                     </Link>
                   )
@@ -466,15 +532,30 @@ export default function BlogList({
               />
             </div>
 
-            {/* Load More Button */}
+            {/* Load More Button - Enhanced */}
             {hasMore && (
-              <div className="text-center mt-12">
+              <div className="text-center mt-16">
                 <button
                   onClick={loadMore}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-4 rounded-full hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105 font-bold text-base"
                 >
-                  {loading ? 'Loading...' : 'Load More Articles'}
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Loading More...
+                    </>
+                  ) : (
+                    <>
+                      Load More Articles
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
                 </button>
               </div>
             )}
