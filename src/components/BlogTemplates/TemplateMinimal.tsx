@@ -46,7 +46,7 @@ export default function TemplateMinimal({
   const showTOC = customLayout?.components.showTOC ?? (headings.length > 0)
   const showSidebar = customLayout?.components.showSidebar ?? true
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-slate-950">
       {/* Minimal Header */}
       <div className="mx-auto max-w-3xl px-4 py-12">
         <div className="text-center">
@@ -58,7 +58,7 @@ export default function TemplateMinimal({
           </div>
 
           {/* Title - Clean & Centered */}
-          <h1 className="mb-8 text-4xl font-light leading-tight text-gray-900 md:text-5xl lg:text-6xl">
+          <h1 className="mb-8 text-4xl font-light leading-tight text-gray-900 dark:text-slate-100 md:text-5xl lg:text-6xl">
             {post.title}
           </h1>
 

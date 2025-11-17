@@ -65,7 +65,7 @@ export default function TemplateModern({
     neutral: 'from-gray-600 to-gray-800'
   }[colorScheme]
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Modern Full-Width Hero */}
       <div className="relative pt-0">
         {post.featured_image && (
@@ -160,7 +160,7 @@ export default function TemplateModern({
             )}
 
             {/* Article Content */}
-            <div className="prose prose-lg prose-slate max-w-none prose-headings:font-black prose-a:text-blue-600 prose-a:no-underline hover:prose-a:text-blue-800">
+            <div className="prose prose-lg prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:text-blue-800 dark:hover:prose-a:text-blue-300">
               {isHtmlContent ? (
                 <div
                   id="zenx-article-content"

@@ -400,14 +400,15 @@ export default async function BlogPost({
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
-      'technology': 'bg-purple-100 text-purple-800',
-      'entertainment': 'bg-yellow-100 text-yellow-800',
-      'business': 'bg-blue-100 text-blue-800',
-      'lifestyle': 'bg-green-100 text-green-800',
-      'sports': 'bg-red-100 text-red-800',
-      'world-news': 'bg-gray-100 text-gray-800'
+      'technology': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'entertainment': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      'business': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'lifestyle': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'sports': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      'gaming': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+      'world-news': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
     }
-    return colors[category] || 'bg-gray-100 text-gray-800'
+    return colors[category] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
   }
 
   const shareUrl = `${baseUrl}/blog/${post.slug}`
@@ -423,7 +424,7 @@ export default async function BlogPost({
         <h1
           {...props}
           id={id}
-          className={mergeClassName('text-3xl font-bold text-slate-900', className)}
+          className={mergeClassName('text-3xl font-bold text-slate-900 dark:text-slate-100', className)}
         >
           {children}
         </h1>
@@ -436,7 +437,7 @@ export default async function BlogPost({
         <h2
           {...props}
           id={id}
-          className={mergeClassName('mt-12 text-2xl font-bold text-slate-900', className)}
+          className={mergeClassName('mt-12 text-2xl font-bold text-slate-900 dark:text-slate-100', className)}
         >
           {children}
         </h2>
@@ -449,7 +450,7 @@ export default async function BlogPost({
         <h3
           {...props}
           id={id}
-          className={mergeClassName('mt-8 text-xl font-semibold text-slate-900', className)}
+          className={mergeClassName('mt-8 text-xl font-semibold text-slate-900 dark:text-slate-100', className)}
         >
           {children}
         </h3>
@@ -459,7 +460,7 @@ export default async function BlogPost({
       markdownParagraphCount += 1
 
       const paragraph = (
-        <p {...props} className={mergeClassName('leading-relaxed text-slate-700', className)}>
+        <p {...props} className={mergeClassName('leading-relaxed text-slate-700 dark:text-slate-300', className)}>
           {children}
         </p>
       )
@@ -503,19 +504,19 @@ export default async function BlogPost({
       )
     },
     ul: ({ children, className, ...props }) => (
-      <ul {...props} className={mergeClassName('my-6 list-disc pl-6 text-slate-700', className)}>
+      <ul {...props} className={mergeClassName('my-6 list-disc pl-6 text-slate-700 dark:text-slate-300', className)}>
         {children}
       </ul>
     ),
     ol: ({ children, className, ...props }) => (
-      <ol {...props} className={mergeClassName('my-6 list-decimal pl-6 text-slate-700', className)}>
+      <ol {...props} className={mergeClassName('my-6 list-decimal pl-6 text-slate-700 dark:text-slate-300', className)}>
         {children}
       </ol>
     ),
     blockquote: ({ children, className, ...props }) => (
       <blockquote
         {...props}
-        className={mergeClassName('my-6 border-l-4 border-blue-500 bg-blue-50/60 px-6 py-4 text-slate-700', className)}
+        className={mergeClassName('my-6 border-l-4 border-blue-500 bg-blue-50/60 dark:bg-blue-900/20 dark:border-blue-400 px-6 py-4 text-slate-700 dark:text-slate-300', className)}
       >
         {children}
       </blockquote>
@@ -523,7 +524,7 @@ export default async function BlogPost({
     code: ({ children, className, ...props }) => (
       <code
         {...props}
-        className={mergeClassName('rounded bg-slate-900/90 px-2 py-1 font-mono text-sm text-slate-100', className)}
+        className={mergeClassName('rounded bg-slate-900/90 dark:bg-slate-800 px-2 py-1 font-mono text-sm text-slate-100 dark:text-slate-200', className)}
       >
         {children}
       </code>
@@ -531,14 +532,14 @@ export default async function BlogPost({
     pre: ({ children, className, ...props }) => (
       <pre
         {...props}
-        className={mergeClassName('my-6 overflow-x-auto rounded-2xl bg-slate-900/95 p-5 text-sm text-slate-50', className)}
+        className={mergeClassName('my-6 overflow-x-auto rounded-2xl bg-slate-900/95 dark:bg-slate-950 p-5 text-sm text-slate-50', className)}
       >
         {children}
       </pre>
     ),
     table: ({ children, className, ...props }) => (
-      <div className={mergeClassName('my-8 overflow-hidden rounded-2xl border border-slate-200 shadow-sm', className)}>
-        <table {...props} className="w-full text-left text-sm text-slate-700">
+      <div className={mergeClassName('my-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm', className)}>
+        <table {...props} className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
           {children}
         </table>
       </div>
@@ -546,20 +547,20 @@ export default async function BlogPost({
     th: ({ children, className, ...props }) => (
       <th
         {...props}
-        className={mergeClassName('bg-slate-900/90 px-4 py-3 text-sm font-semibold text-white', className)}
+        className={mergeClassName('bg-slate-900/90 dark:bg-slate-800 px-4 py-3 text-sm font-semibold text-white', className)}
       >
         {children}
       </th>
     ),
     td: ({ children, className, ...props }) => (
-      <td {...props} className={mergeClassName('px-4 py-3 text-sm text-slate-700', className)}>
+      <td {...props} className={mergeClassName('px-4 py-3 text-sm text-slate-700 dark:text-slate-300 dark:border-slate-700', className)}>
         {children}
       </td>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white pt-6">
+    <div className="min-h-screen bg-white dark:bg-slate-950 pt-6">
       {isPreview && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black px-4 py-2 text-center font-bold">
           👁️ PREVIEW MODE - This is an unpublished draft

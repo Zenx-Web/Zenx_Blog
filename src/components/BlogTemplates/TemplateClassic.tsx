@@ -47,9 +47,9 @@ export default function TemplateClassic({
   const showTOC = customLayout?.components.showTOC ?? (headings.length > 0)
   const showSidebar = customLayout?.components.showSidebar ?? true
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-slate-950">
       {/* Classic Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white pt-0">
+      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 pt-0">
         <div className="mx-auto max-w-4xl px-4 py-12">
           {/* Category Badge */}
           <div className="mb-4">
@@ -59,12 +59,12 @@ export default function TemplateClassic({
           </div>
 
           {/* Title */}
-          <h1 className="mb-6 text-4xl font-bold leading-tight text-gray-900 md:text-5xl">
+          <h1 className="mb-6 text-4xl font-bold leading-tight text-gray-900 dark:text-slate-100 md:text-5xl">
             {post.title}
           </h1>
 
           {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-slate-400">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
               <time>{formattedDate}</time>
@@ -104,8 +104,8 @@ export default function TemplateClassic({
             <aside className="hidden lg:col-span-3 lg:block">
               <div className="sticky top-24">
                 {headings.length > 0 && (
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
-                    <h3 className="mb-4 text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 p-6">
+                    <h3 className="mb-4 text-sm font-bold text-gray-900 dark:text-slate-100 uppercase tracking-wide">
                       Table of Contents
                     </h3>
                     <TableOfContents headings={headings} />
@@ -138,13 +138,13 @@ export default function TemplateClassic({
 
             {/* Tags */}
             {post.tags && post.tags.length > 0 && (
-              <div className="mt-12 border-t border-gray-200 pt-8">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">Tags</h3>
+              <div className="mt-12 border-t border-gray-200 dark:border-slate-800 pt-8">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag: string) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-800"
+                      className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-4 py-2 text-sm font-medium text-blue-800 dark:text-blue-300"
                     >
                       #{tag}
                     </span>
@@ -177,8 +177,8 @@ export default function TemplateClassic({
 
                 {/* Related Posts */}
                 {relatedPosts.length > 0 && (
-                  <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                    <h3 className="mb-4 text-lg font-bold text-gray-900">Related Articles</h3>
+                <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-6">
+                  <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-slate-100">Related Articles</h3>
                     <div className="space-y-4">
                       {relatedPosts.slice(0, 3).map((related) => (
                         <Link
@@ -186,10 +186,10 @@ export default function TemplateClassic({
                           href={`/blog/${related.slug}`}
                           className="group block"
                         >
-                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-600">
-                            {related.title}
-                          </h4>
-                          <p className="mt-1 text-sm text-gray-600">{related.read_time} min read</p>
+                        <h4 className="font-semibold text-gray-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          {related.title}
+                        </h4>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">{related.read_time} min read</p>
                         </Link>
                       ))}
                     </div>
