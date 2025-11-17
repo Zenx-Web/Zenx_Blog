@@ -374,7 +374,7 @@ export default function BlogList({
       {/* Regular Posts Section */}
       <section>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {searchQuery ? `Search Results for "${searchQuery}"` : 
              category && category !== 'all' ? `${category.replace('-', ' ')} Articles` : 
              'Latest Articles'}
@@ -383,7 +383,7 @@ export default function BlogList({
 
         {visiblePosts.length === 0 && !loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No articles found.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">No articles found.</p>
           </div>
         ) : (
           <>
@@ -393,7 +393,7 @@ export default function BlogList({
                   const post = item.post
                   return (
                     <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                      <article className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                      <article className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl dark:hover:shadow-gray-900 transition-shadow border border-transparent dark:border-gray-700">
                         {post.featured_image && (
                           <div className="relative h-48">
                             <Image
@@ -410,13 +410,13 @@ export default function BlogList({
                           </div>
                         )}
                         <div className="p-6">
-                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-2">
+                          <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-3 line-clamp-2">
                             {post.title}
                           </h3>
-                          <p className="text-gray-600 mb-4 line-clamp-3">
+                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
                             {post.excerpt}
                           </p>
-                          <div className="flex items-center text-sm text-gray-500 space-x-4">
+                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
                             <div className="flex items-center">
                               <CalendarIcon className="h-4 w-4 mr-1" />
                               {formatDateSafe(post.published_at, 'MMM dd', 'TBD')}
