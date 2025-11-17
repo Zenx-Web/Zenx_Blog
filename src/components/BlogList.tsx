@@ -188,9 +188,9 @@ export default function BlogList({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gray-50">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gray-50 dark:bg-gray-900">
       {heroPost && !searchQuery && (
-        <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 text-white">
+        <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 dark:bg-slate-800 text-white">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="relative z-10 flex flex-col justify-between p-8 sm:p-10 lg:p-12">
               <div className="space-y-6">
@@ -286,12 +286,12 @@ export default function BlogList({
         <section className="mb-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900">Explore by Topic</h2>
-              <p className="text-sm text-gray-500">Jump into categories other readers love right now.</p>
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Explore by Topic</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Jump into categories other readers love right now.</p>
             </div>
             <Link
               href="/?category=all"
-              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${!category || category === 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${!category || category === 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
             >
               All Articles
             </Link>
@@ -304,10 +304,10 @@ export default function BlogList({
                 <Link
                   key={categoryKey}
                   href={`/?category=${encodeURIComponent(categoryKey)}`}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400'}`}
                 >
                   <span className="capitalize">{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isActive ? 'bg-blue-500/40 text-white' : 'bg-white text-gray-700'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isActive ? 'bg-blue-500/40 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                     {count}
                   </span>
                 </Link>
@@ -331,11 +331,11 @@ export default function BlogList({
 
       {supportingPosts.length > 0 && searchQuery && (
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-semibold text-gray-900">Featured Picks</h2>
+          <h2 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">Featured Picks</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {supportingPosts.map((post) => (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
-                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-gray-900">
                   {post.featured_image && (
                     <div className="relative h-48">
                       <Image

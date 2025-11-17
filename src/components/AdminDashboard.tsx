@@ -2365,6 +2365,7 @@ export default function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     <option value="business" className="text-gray-900 font-medium">💼 Business</option>
                     <option value="lifestyle" className="text-gray-900 font-medium">🌟 Lifestyle</option>
                     <option value="sports" className="text-gray-900 font-medium">⚽ Sports</option>
+                    <option value="gaming" className="text-gray-900 font-medium">🎮 Gaming</option>
                     <option value="world-news" className="text-gray-900 font-medium">📰 World News</option>
                     <option value="science" className="text-gray-900 font-medium">🔬 Science</option>
                     <option value="health" className="text-gray-900 font-medium">🏥 Health</option>
