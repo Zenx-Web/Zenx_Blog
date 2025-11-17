@@ -188,7 +188,7 @@ export default function BlogList({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 bg-gray-50">
       {heroPost && !searchQuery && (
         <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 text-white">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
