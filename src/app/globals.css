@@ -113,11 +113,59 @@ select:focus {
   overflow-wrap: break-word;
 }
 
+.dark .prose {
+  color: #e2e8f0; /* Light gray text for dark mode */
+}
+
+.prose p,
+.prose li,
+.prose td,
+.prose th {
+  color: inherit;
+}
+
+.dark .prose p,
+.dark .prose li,
+.dark .prose td,
+.dark .prose th {
+  color: #e2e8f0; /* Ensure all text elements are visible */
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: #1f2937;
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #f1f5f9; /* Bright white for headings in dark mode */
+}
+
+.prose strong {
+  color: #111827;
+}
+
+.dark .prose strong {
+  color: #f8fafc; /* Extra bright for bold text */
+}
+
 .prose img {
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   max-width: 100%;
   height: auto;
+}
+
+.dark .prose img {
+  box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1);
 }
 
 .prose blockquote {
@@ -127,6 +175,13 @@ select:focus {
   background-color: #F8FAFC;
   padding: 1rem;
   border-radius: 0.5rem;
+  color: #475569;
+}
+
+.dark .prose blockquote {
+  background-color: #1e293b;
+  border-left-color: #60a5fa;
+  color: #cbd5e1;
 }
 
 .prose code {
@@ -134,6 +189,12 @@ select:focus {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   font-size: 0.875em;
+  color: #be123c;
+}
+
+.dark .prose code {
+  background-color: #334155;
+  color: #fda4af;
 }
 
 .prose pre {
@@ -144,7 +205,20 @@ select:focus {
   overflow-x: auto;
 }
 
+.dark .prose pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
 .prose pre code {
   background-color: transparent;
   color: inherit;
+}
+
+.prose a {
+  color: #2563eb;
+}
+
+.dark .prose a {
+  color: #60a5fa;
 }

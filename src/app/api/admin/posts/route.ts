@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import { ensureAdminApiAccess } from '@/lib/auth'
+import { validateContent, autoFixContent, generateValidationReport } from '@/lib/content-validator'
 import type { TablesInsert, TablesUpdate } from '@/types/database.types'
 
 // Get all blog posts
@@ -76,6 +77,40 @@ export async function POST(request: NextRequest) {
     }
 
     if (id) {
+      // ✅ VALIDATE BLOG UPDATE
+      if (updatePayload.content && updatePayload.title) {
+        console.log('🔍 Validating blog update...')
+        const validation = validateContent(
+          updatePayload.content,
+          updatePayload.title,
+          updatePayload.excerpt || '',
+          updatePayload.tags || [],
+          updatePayload.featured_image || undefined
+        )
+        
+        console.log(generateValidationReport(validation))
+        
+        // Auto-fix if validation fails
+        if (!validation.isValid) {
+          console.log('🔧 Auto-fixing blog update...')
+          updatePayload.content = autoFixContent(
+            updatePayload.content, 
+            updatePayload.category || 'technology'
+          )
+          
+          const revalidation = validateContent(
+            updatePayload.content,
+            updatePayload.title,
+            updatePayload.excerpt || '',
+            updatePayload.tags || [],
+            updatePayload.featured_image || undefined
+          )
+          console.log('📊 After auto-fix:', generateValidationReport(revalidation))
+        } else {
+          console.log('✅ Blog update passed all quality checks!')
+        }
+      }
+      
       const { data, error } = await supabaseAdmin
         .from('blog_posts')
         .update(updatePayload)
@@ -117,6 +152,40 @@ export async function POST(request: NextRequest) {
         excerpt: updatePayload.excerpt!,
         category: updatePayload.category!,
         slug: updatePayload.slug || (await ensureUniqueSlug(updatePayload.title!, undefined))
+      }
+
+      // ✅ VALIDATE MANUAL BLOG CONTENT
+      console.log('🔍 Validating manual blog content...')
+      const validation = validateContent(
+        insertPayload.content,
+        insertPayload.title,
+        insertPayload.excerpt,
+        insertPayload.tags || [],
+        insertPayload.featured_image || undefined
+      )
+      
+      console.log(generateValidationReport(validation))
+      
+      // Auto-fix if validation fails
+      if (!validation.isValid) {
+        console.log('🔧 Auto-fixing manual blog content...')
+        insertPayload.content = autoFixContent(insertPayload.content, insertPayload.category)
+        
+        // Re-validate after auto-fix
+        const revalidation = validateContent(
+          insertPayload.content,
+          insertPayload.title,
+          insertPayload.excerpt,
+          insertPayload.tags || [],
+          insertPayload.featured_image || undefined
+        )
+        console.log('📊 After auto-fix:', generateValidationReport(revalidation))
+        
+        if (!revalidation.isValid) {
+          console.warn('⚠️ Manual blog still has issues after auto-fix:', revalidation.errors)
+        }
+      } else {
+        console.log('✅ Manual blog passed all quality checks!')
       }
 
       const { data, error } = await supabaseAdmin

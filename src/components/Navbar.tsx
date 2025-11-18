@@ -7,7 +7,15 @@ import { useAuth } from '@/lib/auth-context'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import ThemeToggle from '@/components/ThemeToggle'
 
-const categories = [
+interface Category {
+  name: string
+  slug: string
+  icon: string
+  count?: number
+}
+
+// All possible categories
+const allCategories: Category[] = [
   { name: 'Technology', slug: 'technology', icon: '💻' },
   { name: 'Gaming', slug: 'gaming', icon: '🎮' },
   { name: 'Entertainment', slug: 'entertainment', icon: '🎬' },
@@ -22,6 +30,8 @@ export default function Navbar() {
   const [showCategoriesDropdown, setShowCategoriesDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [visibleCategories, setVisibleCategories] = useState<Category[]>(allCategories)
+  const [loadingCategories, setLoadingCategories] = useState(true)
   const { user, signOut } = useAuth()
   const { profile } = useUserProfile()
   
@@ -29,6 +39,34 @@ export default function Navbar() {
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   const resolvedDisplayName = profile?.display_name?.trim() || user?.email?.split('@')[0] || 'Account'
+
+  // Fetch active categories (with 3+ posts)
+  useEffect(() => {
+    async function fetchActiveCategories() {
+      try {
+        const response = await fetch('/api/categories/counts', {
+          next: { revalidate: 300 } as any // Cache for 5 minutes
+        })
+        const data = await response.json()
+        
+        if (data.success && data.categories) {
+          // Filter to only show categories with 3+ posts
+          const active = allCategories.filter(cat => 
+            data.categories.some((c: any) => c.slug === cat.slug && c.count >= 3)
+          )
+          setVisibleCategories(active.length > 0 ? active : allCategories) // Fallback to all if API fails
+        }
+      } catch (error) {
+        console.error('Failed to fetch category counts:', error)
+        // On error, show all categories as fallback
+        setVisibleCategories(allCategories)
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+    
+    void fetchActiveCategories()
+  }, [])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -98,19 +136,29 @@ export default function Navbar() {
 
               {showCategoriesDropdown && (
                 <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
-                  <div className="grid grid-cols-1 gap-1 px-2">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.slug}
-                        href={`/?category=${category.slug}`}
-                        className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-md transition-all"
-                        onClick={() => setShowCategoriesDropdown(false)}
-                      >
-                        <span className="text-lg">{category.icon}</span>
-                        <span className="font-medium">{category.name}</span>
-                      </Link>
-                    ))}
-                  </div>
+                  {loadingCategories ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      Loading categories...
+                    </div>
+                  ) : visibleCategories.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      No categories available
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-1 px-2">
+                      {visibleCategories.map((category) => (
+                        <Link
+                          key={category.slug}
+                          href={`/?category=${category.slug}`}
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-md transition-all"
+                          onClick={() => setShowCategoriesDropdown(false)}
+                        >
+                          <span className="text-lg">{category.icon}</span>
+                          <span className="font-medium">{category.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -283,21 +331,31 @@ export default function Navbar() {
                 </Link>
 
                 {/* Categories Section */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <p className="px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     Categories
                   </p>
-                  {categories.map((category) => (
-                    <Link
-                      key={category.slug}
-                      href={`/?category=${category.slug}`}
-                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg text-base transition-all"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <span className="text-lg">{category.icon}</span>
-                      <span className="font-medium">{category.name}</span>
-                    </Link>
-                  ))}
+                  {loadingCategories ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      Loading categories...
+                    </div>
+                  ) : visibleCategories.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      No categories available
+                    </div>
+                  ) : (
+                    visibleCategories.map((category) => (
+                      <Link
+                        key={category.slug}
+                        href={`/?category=${category.slug}`}
+                        className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 px-4 py-3 rounded-lg text-base transition-all"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span className="text-lg">{category.icon}</span>
+                        <span className="font-medium">{category.name}</span>
+                      </Link>
+                    ))
+                  )}
                 </div>
 
                 {/* Pages Section */}

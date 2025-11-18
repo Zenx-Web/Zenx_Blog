@@ -573,8 +573,38 @@ export default function BlogList({
         </div>
 
         {visiblePosts.length === 0 && !loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">No articles found.</p>
+          <div className="text-center py-16">
+            <div className="max-w-2xl mx-auto bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-2xl p-8 border-2 border-purple-200 dark:border-purple-700">
+              <div className="text-6xl mb-4">🚀</div>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Coming Soon!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-lg mb-6 leading-relaxed">
+                {searchQuery ? (
+                  <>We couldn't find any articles matching "<strong>{searchQuery}</strong>". Try different keywords or check back soon!</>
+                ) : category && category !== 'all' ? (
+                  <>We're working on bringing you the latest content in <strong>{category.replace('-', ' ')}</strong>. Check back soon or explore other trending topics!</>
+                ) : (
+                  <>We're preparing fresh content for you. Check back soon for the latest trending news and insights!</>
+                )}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link 
+                  href="/"
+                  className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                >
+                  ← Back to Home
+                </Link>
+                {(searchQuery || (category && category !== 'all')) && (
+                  <Link 
+                    href="/"
+                    className="inline-block px-6 py-3 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all border-2 border-gray-300 dark:border-gray-600"
+                  >
+                    View All Articles
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <>

@@ -153,12 +153,24 @@ export default function AboutPage() {
           </section>
 
           {/* Our Standards */}
-          <section className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm">
-            <h2 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Our Editorial Standards</h2>
+          <section className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border-2 border-blue-200 dark:border-blue-800">
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-4">📋 Our Editorial Standards</h2>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg mb-6">
+              <p className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                ✅ Quality Content Guarantee
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                Every article published on ImZenx meets strict quality standards to ensure value for our readers and compliance with Google AdSense policies.
+              </p>
+            </div>
             <ul className="space-y-3 text-gray-700 dark:text-gray-300">
               <li className="flex items-start space-x-3">
                 <span className="text-green-500 text-xl">✓</span>
-                <span><strong>Factual Accuracy:</strong> Every claim is verified against reliable sources</span>
+                <span><strong>Minimum 800 Words:</strong> Comprehensive coverage with context, analysis, and insights</span>
+              </li>
+              <li className="flex items-start space-x-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span><strong>Factual Accuracy:</strong> Every claim is verified against reliable sources before publication</span>
               </li>
               <li className="flex items-start space-x-3">
                 <span className="text-green-500 text-xl">✓</span>
@@ -166,17 +178,60 @@ export default function AboutPage() {
               </li>
               <li className="flex items-start space-x-3">
                 <span className="text-green-500 text-xl">✓</span>
-                <span><strong>SEO & Readability:</strong> Articles are optimized for both search engines and human readers</span>
+                <span><strong>Proper Structure:</strong> Clear headings, sections, and formatting for easy reading</span>
               </li>
               <li className="flex items-start space-x-3">
                 <span className="text-green-500 text-xl">✓</span>
-                <span><strong>AI Transparency:</strong> Clear disclosure on every AI-assisted piece</span>
+                <span><strong>Visual Content:</strong> Relevant images with proper attribution and alt text for accessibility</span>
               </li>
               <li className="flex items-start space-x-3">
                 <span className="text-green-500 text-xl">✓</span>
-                <span><strong>AdSense Compliance:</strong> Content meets Google's quality and policy standards</span>
+                <span><strong>Internal Linking:</strong> Connected to related articles for better navigation and context</span>
+              </li>
+              <li className="flex items-start space-x-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span><strong>SEO & Readability:</strong> Optimized for both search engines and human readers</span>
+              </li>
+              <li className="flex items-start space-x-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span><strong>AI Transparency:</strong> Clear disclosure on every AI-assisted piece with "AI-Assisted" badge</span>
+              </li>
+              <li className="flex items-start space-x-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span><strong>Regular Updates:</strong> Articles updated as stories develop or new information emerges</span>
+              </li>
+              <li className="flex items-start space-x-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span><strong>AdSense Compliance:</strong> All content meets Google's quality and policy standards</span>
               </li>
             </ul>
+            <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <strong>Note:</strong> We do not publish thin content, misleading headlines, or auto-generated articles without human review. Every post is carefully crafted to provide genuine value to our readers.
+              </p>
+            </div>
+          </section>
+
+          {/* Author Attribution & Accountability */}
+          <section className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm">
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-4">👤 Author Attribution</h2>
+            <div className="space-y-4 text-gray-700 dark:text-gray-300">
+              <p className="text-lg">
+                All articles on ImZenx are attributed to the <strong>"ImZenx Editorial Team"</strong> with clear AI disclosure.
+              </p>
+              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+                <p className="font-semibold mb-2">Typical Byline:</p>
+                <div className="border-l-4 border-purple-600 pl-4">
+                  <p className="text-sm"><strong>Written By:</strong> ImZenx Editorial Team (AI-Assisted)</p>
+                  <p className="text-sm"><strong>Reviewed By:</strong> Human Editors</p>
+                  <p className="text-sm"><strong>Published:</strong> [Date]</p>
+                  <p className="text-sm"><strong>Last Updated:</strong> [Date]</p>
+                </div>
+              </div>
+              <p>
+                This attribution system ensures accountability while being transparent about our AI-assisted workflow.
+              </p>
+            </div>
           </section>
 
           {/* What's Next */}

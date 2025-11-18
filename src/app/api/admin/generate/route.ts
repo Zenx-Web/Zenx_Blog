@@ -6,6 +6,7 @@ import { BLOG_CONTENT_FORMAT_OPTIONS } from '@/types/content'
 import { supabaseAdmin } from '@/lib/supabase'
 import { ensureAdminApiAccess } from '@/lib/auth'
 import type { TablesInsert, TablesUpdate } from '@/types/database.types'
+import { validateContent, autoFixContent, generateValidationReport } from '@/lib/content-validator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -362,11 +363,46 @@ export async function POST(request: NextRequest) {
     // DEBUG: Log content sample (first 500 chars)
     console.log('📄 Enhanced content preview (first 500 chars):', enhancedContent.substring(0, 500))
 
+    // ✅ VALIDATE CONTENT QUALITY (Auto-fix if needed)
+    console.log('🔍 Validating content quality...')
+    const validation = validateContent(
+      enhancedContent,
+      generatedBlog.title,
+      generatedBlog.excerpt || '',
+      generatedBlog.tags || [],
+      featuredImageUrl
+    )
+    
+    console.log(generateValidationReport(validation))
+    
+    // Auto-fix content if it has issues
+    let finalContent = enhancedContent
+    if (!validation.isValid) {
+      console.log('🔧 Auto-fixing content issues...')
+      finalContent = autoFixContent(enhancedContent, categorySlug)
+      
+      // Re-validate after auto-fix
+      const revalidation = validateContent(
+        finalContent,
+        generatedBlog.title,
+        generatedBlog.excerpt || '',
+        generatedBlog.tags || [],
+        featuredImageUrl
+      )
+      console.log('📊 After auto-fix:', generateValidationReport(revalidation))
+      
+      if (!revalidation.isValid) {
+        console.warn('⚠️ Content still has issues after auto-fix:', revalidation.errors)
+      }
+    } else {
+      console.log('✅ Content passed all quality checks!')
+    }
+
     // Save to database as draft
     const insertPayload: TablesInsert<'blog_posts'> = {
       title: generatedBlog.title,
       slug,
-      content: enhancedContent, // Use enhanced content with branding
+      content: finalContent, // Use validated and fixed content
       excerpt: generatedBlog.excerpt,
       featured_image: featuredImageUrl,
       category: categorySlug,
