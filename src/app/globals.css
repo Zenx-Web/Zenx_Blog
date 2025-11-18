@@ -107,28 +107,32 @@ select:focus {
 
 /* Custom styles for prose content */
 .prose {
-  color: #374151;
+  color: #1f2937 !important;
   max-width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
 .dark .prose {
-  color: #e2e8f0; /* Light gray text for dark mode */
+  color: #f1f5f9 !important; /* Bright white text for dark mode */
 }
 
 .prose p,
 .prose li,
 .prose td,
-.prose th {
-  color: inherit;
+.prose th,
+.prose span,
+.prose div {
+  color: #1f2937 !important;
 }
 
 .dark .prose p,
 .dark .prose li,
 .dark .prose td,
-.dark .prose th {
-  color: #e2e8f0; /* Ensure all text elements are visible */
+.dark .prose th,
+.dark .prose span,
+.dark .prose div {
+  color: #f1f5f9 !important; /* Bright white for all text elements */
 }
 
 .prose h1,
@@ -137,7 +141,8 @@ select:focus {
 .prose h4,
 .prose h5,
 .prose h6 {
-  color: #1f2937;
+  color: #111827 !important;
+  font-weight: 700 !important;
 }
 
 .dark .prose h1,
@@ -146,15 +151,30 @@ select:focus {
 .dark .prose h4,
 .dark .prose h5,
 .dark .prose h6 {
-  color: #f1f5f9; /* Bright white for headings in dark mode */
+  color: #ffffff !important; /* Pure white for headings in dark mode */
+  font-weight: 700 !important;
 }
 
-.prose strong {
-  color: #111827;
+.prose strong,
+.prose b {
+  color: #111827 !important;
+  font-weight: 700 !important;
 }
 
-.dark .prose strong {
-  color: #f8fafc; /* Extra bright for bold text */
+.dark .prose strong,
+.dark .prose b {
+  color: #ffffff !important; /* Pure white for bold text */
+  font-weight: 700 !important;
+}
+
+.prose em,
+.prose i {
+  color: #374151 !important;
+}
+
+.dark .prose em,
+.dark .prose i {
+  color: #e2e8f0 !important;
 }
 
 .prose img {
@@ -175,13 +195,13 @@ select:focus {
   background-color: #F8FAFC;
   padding: 1rem;
   border-radius: 0.5rem;
-  color: #475569;
+  color: #475569 !important;
 }
 
 .dark .prose blockquote {
   background-color: #1e293b;
   border-left-color: #60a5fa;
-  color: #cbd5e1;
+  color: #e2e8f0 !important;
 }
 
 .prose code {
@@ -189,17 +209,17 @@ select:focus {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   font-size: 0.875em;
-  color: #be123c;
+  color: #be123c !important;
 }
 
 .dark .prose code {
   background-color: #334155;
-  color: #fda4af;
+  color: #fda4af !important;
 }
 
 .prose pre {
   background-color: #1E293B;
-  color: #F1F5F9;
+  color: #F1F5F9 !important;
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -207,18 +227,71 @@ select:focus {
 
 .dark .prose pre {
   background-color: #0f172a;
-  color: #e2e8f0;
+  color: #f1f5f9 !important;
 }
 
 .prose pre code {
-  background-color: transparent;
-  color: inherit;
+  background-color: transparent !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .prose pre code {
+  background-color: transparent !important;
+  color: #f1f5f9 !important;
 }
 
 .prose a {
-  color: #2563eb;
+  color: #2563eb !important;
+  text-decoration: underline;
 }
 
 .dark .prose a {
-  color: #60a5fa;
+  color: #60a5fa !important;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #1d4ed8 !important;
+}
+
+.dark .prose a:hover {
+  color: #93c5fd !important;
+}
+
+/* Ensure lists are visible */
+.prose ul,
+.prose ol {
+  color: #1f2937 !important;
+}
+
+.dark .prose ul,
+.dark .prose ol {
+  color: #f1f5f9 !important;
+}
+
+/* Table text visibility */
+.prose table {
+  color: #1f2937 !important;
+}
+
+.dark .prose table {
+  color: #f1f5f9 !important;
+  border-color: #475569;
+}
+
+.dark .prose thead {
+  border-color: #475569;
+}
+
+.dark .prose tbody tr {
+  border-color: #334155;
+}
+
+/* Figure captions */
+.prose figcaption {
+  color: #6b7280 !important;
+}
+
+.dark .prose figcaption {
+  color: #9ca3af !important;
 }
