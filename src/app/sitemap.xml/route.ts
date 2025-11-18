@@ -53,27 +53,41 @@ export async function GET() {
     <loc>${baseUrl}/about</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>${baseUrl}/contact</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/how-we-use-ai</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- User dashboard (for logged-in users) -->
+  <url>
+    <loc>${baseUrl}/dashboard</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   
-  <!-- Legal pages (Updated Nov 3, 2025) -->
+  <!-- Legal pages (Updated Nov 18, 2025) -->
   <url>
     <loc>${baseUrl}/privacy</loc>
-    <lastmod>2025-11-03T00:00:00.000Z</lastmod>
+    <lastmod>2025-11-18T00:00:00.000Z</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>${baseUrl}/terms</loc>
-    <lastmod>2025-11-03T00:00:00.000Z</lastmod>
+    <lastmod>2025-11-18T00:00:00.000Z</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+    <priority>0.5</priority>
   </url>
   
   <!-- Authentication pages -->
@@ -81,13 +95,13 @@ export async function GET() {
     <loc>${baseUrl}/auth/login</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.4</priority>
   </url>
   <url>
     <loc>${baseUrl}/auth/register</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.4</priority>
   </url>
 </urlset>`
 
